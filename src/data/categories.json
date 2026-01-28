@@ -1,0 +1,50 @@
+[
+  {
+    "id": "vergunningen",
+    "name": "Vergunningverlening",
+    "slug": "vergunningen",
+    "description": "Alles over omgevingsvergunningen, procedures en aanvragen",
+    "icon": "FileCheck",
+    "articleCount": 24
+  },
+  {
+    "id": "handhaving",
+    "name": "Toezicht & Handhaving",
+    "slug": "handhaving",
+    "description": "Handhavingsbeleid, sancties en toezichtprocedures",
+    "icon": "Shield",
+    "articleCount": 18
+  },
+  {
+    "id": "juridisch",
+    "name": "Juridisch",
+    "slug": "juridisch",
+    "description": "Wet- en regelgeving, jurisprudentie en bezwaarprocedures",
+    "icon": "Scale",
+    "articleCount": 31
+  },
+  {
+    "id": "ruimtelijke-ordening",
+    "name": "Ruimtelijke Ordening",
+    "slug": "ruimtelijke-ordening",
+    "description": "Bestemmingsplannen, omgevingsvisie en gebiedsontwikkeling",
+    "icon": "Map",
+    "articleCount": 22
+  },
+  {
+    "id": "milieu",
+    "name": "Milieu & Duurzaamheid",
+    "slug": "milieu",
+    "description": "Milieurecht, duurzaamheidsbeleid en energietransitie",
+    "icon": "Leaf",
+    "articleCount": 15
+  },
+  {
+    "id": "bouwen",
+    "name": "Bouwen & Wonen",
+    "slug": "bouwen",
+    "description": "Bouwregelgeving, woningbouw en constructieve veiligheid",
+    "icon": "Building",
+    "articleCount": 27
+  }
+]

@@ -1,0 +1,68 @@
+[
+  {
+    "id": "1",
+    "title": "Nieuwe Omgevingswet: wat verandert er voor vergunningverlening?",
+    "summary": "Een overzicht van de belangrijkste wijzigingen in het vergunningstelsel onder de Omgevingswet.",
+    "category": "vergunningen",
+    "tags": ["omgevingswet", "vergunningen", "procedures"],
+    "author": "Mr. J. van der Berg",
+    "publishedAt": "2024-01-15",
+    "updatedAt": "2024-01-20",
+    "readTime": 8
+  },
+  {
+    "id": "2",
+    "title": "Handhavingsstrategie bij illegale bouw",
+    "summary": "Praktische handvatten voor een effectieve handhavingsaanpak bij constatering van illegale bouwwerken.",
+    "category": "handhaving",
+    "tags": ["handhaving", "illegale bouw", "sancties"],
+    "author": "Drs. A. Jansen",
+    "publishedAt": "2024-01-12",
+    "updatedAt": "2024-01-12",
+    "readTime": 6
+  },
+  {
+    "id": "3",
+    "title": "Bezwaarprocedures onder de Awb: actuele jurisprudentie",
+    "summary": "Analyse van recente uitspraken over bezwaarprocedures en de impact op de gemeentelijke praktijk.",
+    "category": "juridisch",
+    "tags": ["awb", "bezwaar", "jurisprudentie"],
+    "author": "Mr. K. de Vries",
+    "publishedAt": "2024-01-10",
+    "updatedAt": "2024-01-18",
+    "readTime": 12
+  },
+  {
+    "id": "4",
+    "title": "Bestemmingsplan vs. Omgevingsplan: de overgang",
+    "summary": "Hoe bestaande bestemmingsplannen worden omgezet naar het nieuwe omgevingsplan.",
+    "category": "ruimtelijke-ordening",
+    "tags": ["bestemmingsplan", "omgevingsplan", "transitie"],
+    "author": "Ir. M. Bakker",
+    "publishedAt": "2024-01-08",
+    "updatedAt": "2024-01-08",
+    "readTime": 10
+  },
+  {
+    "id": "5",
+    "title": "Energielabel C-verplichting kantoren: handhaving in de praktijk",
+    "summary": "Stand van zaken rondom de handhaving van de energielabel C-verplichting voor kantoorgebouwen.",
+    "category": "milieu",
+    "tags": ["energielabel", "kantoren", "duurzaamheid"],
+    "author": "Ing. P. Smit",
+    "publishedAt": "2024-01-05",
+    "updatedAt": "2024-01-15",
+    "readTime": 7
+  },
+  {
+    "id": "6",
+    "title": "Constructieve veiligheid bij verbouwingen",
+    "summary": "Aandachtspunten bij de beoordeling van constructieve veiligheid bij verbouwingsaanvragen.",
+    "category": "bouwen",
+    "tags": ["constructie", "veiligheid", "verbouwing"],
+    "author": "Ir. L. Mulder",
+    "publishedAt": "2024-01-03",
+    "updatedAt": "2024-01-03",
+    "readTime": 9
+  }
+]

@@ -1,0 +1,138 @@
+{
+  "vergunningverlener": [
+    {
+      "id": "v1",
+      "title": "Omgevingsvergunning beoordelen",
+      "description": "Stap-voor-stap begeleiding bij de beoordeling van een aanvraag",
+      "icon": "FileCheck",
+      "link": "/tools/checklists/omgevingsvergunning",
+      "color": "bg-blue-50 text-blue-600"
+    },
+    {
+      "id": "v2",
+      "title": "Termijnen berekenen",
+      "description": "Bereken fatale termijnen voor vergunningprocedures",
+      "icon": "Calendar",
+      "link": "/tools/termijn-calculator",
+      "color": "bg-purple-50 text-purple-600"
+    },
+    {
+      "id": "v3",
+      "title": "Leges bepalen",
+      "description": "Bereken de verschuldigde leges voor een aanvraag",
+      "icon": "Calculator",
+      "link": "/tools/leges-calculator",
+      "color": "bg-green-50 text-green-600"
+    },
+    {
+      "id": "v4",
+      "title": "Stel een vraag",
+      "description": "Krijg direct antwoord van de AI-assistent",
+      "icon": "MessageCircle",
+      "link": "/assistent",
+      "color": "bg-field-pale text-field-primary"
+    }
+  ],
+  "toezichthouder": [
+    {
+      "id": "t1",
+      "title": "Controle voorbereiden",
+      "description": "Checklist voor het voorbereiden van een controlebezoek",
+      "icon": "ClipboardCheck",
+      "link": "/tools/checklists/controle",
+      "color": "bg-orange-50 text-orange-600"
+    },
+    {
+      "id": "t2",
+      "title": "Handhavingsbesluit opstellen",
+      "description": "Stappenplan voor het opstellen van een handhavingsbesluit",
+      "icon": "FileWarning",
+      "link": "/bibliotheek/handhaving/handhavingsbesluit-opstellen",
+      "color": "bg-red-50 text-red-600"
+    },
+    {
+      "id": "t3",
+      "title": "Dwangsom berekenen",
+      "description": "Hulp bij het bepalen van een passende dwangsom",
+      "icon": "Calculator",
+      "link": "/tools/dwangsom-calculator",
+      "color": "bg-purple-50 text-purple-600"
+    },
+    {
+      "id": "t4",
+      "title": "Stel een vraag",
+      "description": "Krijg direct antwoord van de AI-assistent",
+      "icon": "MessageCircle",
+      "link": "/assistent",
+      "color": "bg-field-pale text-field-primary"
+    }
+  ],
+  "jurist": [
+    {
+      "id": "j1",
+      "title": "Jurisprudentie zoeken",
+      "description": "Doorzoek relevante uitspraken en jurisprudentie",
+      "icon": "Scale",
+      "link": "/bibliotheek/juridisch",
+      "color": "bg-indigo-50 text-indigo-600"
+    },
+    {
+      "id": "j2",
+      "title": "Bezwaarschrift beoordelen",
+      "description": "Checklist voor de beoordeling van bezwaarschriften",
+      "icon": "FileSearch",
+      "link": "/tools/checklists/bezwaar",
+      "color": "bg-amber-50 text-amber-600"
+    },
+    {
+      "id": "j3",
+      "title": "Besluit op bezwaar",
+      "description": "Format en richtlijnen voor beslissing op bezwaar",
+      "icon": "FileText",
+      "link": "/bibliotheek/juridisch/besluit-op-bezwaar",
+      "color": "bg-teal-50 text-teal-600"
+    },
+    {
+      "id": "j4",
+      "title": "Stel een vraag",
+      "description": "Krijg direct antwoord van de AI-assistent",
+      "icon": "MessageCircle",
+      "link": "/assistent",
+      "color": "bg-field-pale text-field-primary"
+    }
+  ],
+  "beleidsmedewerker": [
+    {
+      "id": "b1",
+      "title": "Omgevingsplan raadplegen",
+      "description": "Informatie over het werken met het omgevingsplan",
+      "icon": "Map",
+      "link": "/bibliotheek/ruimtelijke-ordening/omgevingsplan",
+      "color": "bg-emerald-50 text-emerald-600"
+    },
+    {
+      "id": "b2",
+      "title": "Beleidskader opstellen",
+      "description": "Handreikingen voor het opstellen van beleidskaders",
+      "icon": "FileEdit",
+      "link": "/bibliotheek/ruimtelijke-ordening/beleidskaders",
+      "color": "bg-cyan-50 text-cyan-600"
+    },
+    {
+      "id": "b3",
+      "title": "Participatietraject",
+      "description": "Begeleiding bij het opzetten van participatie",
+      "icon": "Users",
+      "link": "/tools/checklists/participatie",
+      "color": "bg-pink-50 text-pink-600"
+    },
+    {
+      "id": "b4",
+      "title": "Stel een vraag",
+      "description": "Krijg direct antwoord van de AI-assistent",
+      "icon": "MessageCircle",
+      "link": "/assistent",
+      "color": "bg-field-pale text-field-primary"
+    }
+  ]
+}

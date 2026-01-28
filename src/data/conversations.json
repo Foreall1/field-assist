@@ -1,0 +1,86 @@
+{
+  "currentConversation": {
+    "id": "conv-1",
+    "title": "Omgevingswet procedures",
+    "messages": [
+      {
+        "id": "msg-1",
+        "role": "user",
+        "content": "Wat zijn de belangrijkste wijzigingen in de vergunningprocedure onder de Omgevingswet?",
+        "timestamp": "2024-01-22T10:30:00"
+      },
+      {
+        "id": "msg-2",
+        "role": "assistant",
+        "content": "De Omgevingswet brengt enkele belangrijke wijzigingen in de vergunningprocedure:\n\n**1. Reguliere procedure als standaard**\nDe reguliere procedure (8 weken) is nu de hoofdregel. De uitgebreide procedure (26 weken) geldt alleen nog voor specifiek aangewezen gevallen.\n\n**2. De knip tussen bouwen en ruimtelijke aspecten**\nEen belangrijke wijziging is de scheiding tussen de technische bouwactiviteit en de omgevingsplanactiviteit. Dit betekent dat een aanvraag uit meerdere activiteiten kan bestaan.\n\n**3. Participatie**\nBij bepaalde aanvragen moet de aanvrager aangeven of en hoe participatie heeft plaatsgevonden.\n\n**4. Vergunning van rechtswege vervalt**\nDe lex silencio positivo (vergunning van rechtswege) is afgeschaft. Bij termijnoverschrijding ontstaat geen vergunning meer automatisch.",
+        "timestamp": "2024-01-22T10:30:15",
+        "citations": [
+          {
+            "id": "cit-1",
+            "title": "Omgevingswet - Hoofdstuk 5 Procedures",
+            "type": "wet",
+            "excerpt": "Artikel 5.1 bepaalt dat de reguliere procedure van toepassing is, tenzij..."
+          },
+          {
+            "id": "cit-2",
+            "title": "Nieuwe Omgevingswet: de belangrijkste wijzigingen",
+            "type": "artikel",
+            "excerpt": "Een compleet overzicht van wat er verandert met de inwerkingtreding..."
+          }
+        ]
+      },
+      {
+        "id": "msg-3",
+        "role": "user",
+        "content": "Hoe zit het precies met die knip?",
+        "timestamp": "2024-01-22T10:32:00"
+      },
+      {
+        "id": "msg-4",
+        "role": "assistant",
+        "content": "De 'knip' is inderdaad een van de meest ingrijpende wijzigingen. Laat me dit uitleggen:\n\n**Wat is de knip?**\nOnder de Omgevingswet wordt onderscheid gemaakt tussen:\n- **Technische bouwactiviteit**: de constructieve en technische eisen (Bbl)\n- **Omgevingsplanactiviteit bouwen**: de ruimtelijke aspecten (welstand, bestemmingsplan)\n\n**Praktische gevolgen:**\n\n1. **Twee losse toetsen**: Een bouwplan wordt nu op twee aspecten beoordeeld die los van elkaar staan\n\n2. **Verschillende bevoegde gezagen**: De technische toets kan door een private kwaliteitsborger worden gedaan (bij gevolgklasse 1)\n\n3. **Gefaseerde aanvraag mogelijk**: De aanvrager kan ervoor kiezen om eerst de omgevingsplanactiviteit aan te vragen en later de technische bouwactiviteit\n\n**Tip voor de praktijk:**\nControleer bij binnenkomst van een aanvraag altijd welke activiteiten zijn aangevraagd en of de aanvraag volledig is voor alle activiteiten.",
+        "timestamp": "2024-01-22T10:32:20",
+        "citations": [
+          {
+            "id": "cit-3",
+            "title": "Besluit bouwwerken leefomgeving (Bbl)",
+            "type": "wet",
+            "excerpt": "Hoofdstuk 2 bevat de algemene bepalingen over de technische bouwactiviteit..."
+          }
+        ]
+      }
+    ]
+  },
+  "history": [
+    {
+      "id": "conv-1",
+      "title": "Omgevingswet procedures",
+      "lastMessage": "2024-01-22T10:32:20",
+      "messageCount": 4
+    },
+    {
+      "id": "conv-2",
+      "title": "Handhaving illegale bouw",
+      "lastMessage": "2024-01-21T14:15:00",
+      "messageCount": 6
+    },
+    {
+      "id": "conv-3",
+      "title": "Bezwaartermijnen Awb",
+      "lastMessage": "2024-01-20T09:45:00",
+      "messageCount": 3
+    },
+    {
+      "id": "conv-4",
+      "title": "Leges berekening",
+      "lastMessage": "2024-01-19T16:20:00",
+      "messageCount": 5
+    }
+  ],
+  "suggestedQuestions": [
+    "Wat zijn de weigeringsgronden voor een omgevingsvergunning?",
+    "Hoe bereken ik de beslistermijn?",
+    "Wanneer is de uitgebreide procedure van toepassing?",
+    "Wat moet ik doen bij een onvolledige aanvraag?"
+  ]
+}

@@ -1,0 +1,38 @@
+[
+  {
+    "id": "tr1",
+    "title": "Nieuwe Omgevingswet: de belangrijkste wijzigingen op een rij",
+    "summary": "Een compleet overzicht van wat er verandert met de inwerkingtreding van de Omgevingswet en wat dit betekent voor uw dagelijkse praktijk.",
+    "category": "Vergunningverlening",
+    "categorySlug": "vergunningen",
+    "slug": "omgevingswet-belangrijkste-wijzigingen",
+    "author": "Mr. J. van der Berg",
+    "readTime": 12,
+    "views": 2847,
+    "date": "2024-01-15"
+  },
+  {
+    "id": "tr2",
+    "title": "Handhavingsstrategie bij illegale bewoning van recreatiewoningen",
+    "summary": "Praktische handvatten voor een effectieve en juridisch houdbare aanpak van permanente bewoning op recreatieparken.",
+    "category": "Handhaving",
+    "categorySlug": "handhaving",
+    "slug": "handhaving-illegale-bewoning-recreatiewoningen",
+    "author": "Drs. A. Jansen",
+    "readTime": 8,
+    "views": 1923,
+    "date": "2024-01-18"
+  },
+  {
+    "id": "tr3",
+    "title": "Recente jurisprudentie: vertrouwensbeginsel bij handhaving",
+    "summary": "Analyse van belangrijke uitspraken over het vertrouwensbeginsel en de gevolgen voor handhavingsprocedures.",
+    "category": "Juridisch",
+    "categorySlug": "juridisch",
+    "slug": "jurisprudentie-vertrouwensbeginsel-handhaving",
+    "author": "Mr. K. de Vries",
+    "readTime": 15,
+    "views": 1654,
+    "date": "2024-01-20"
+  }
+]

@@ -1,0 +1,38 @@
+[
+  {
+    "id": "u1",
+    "type": "article",
+    "title": "Nieuw artikel: Energielabel C-verplichting uitgesteld",
+    "description": "Lees over de recente ontwikkelingen rondom de energielabel C-verplichting voor kantoren.",
+    "date": "2024-01-22",
+    "link": "/bibliotheek/milieu/energielabel-c-uitgesteld",
+    "isNew": true
+  },
+  {
+    "id": "u2",
+    "type": "update",
+    "title": "Checklist omgevingsvergunning geactualiseerd",
+    "description": "De checklist is aangepast aan de laatste wijzigingen in de Omgevingswet.",
+    "date": "2024-01-21",
+    "link": "/tools/checklists/omgevingsvergunning",
+    "isNew": true
+  },
+  {
+    "id": "u3",
+    "type": "law",
+    "title": "Wetswijziging: Besluit bouwwerken leefomgeving",
+    "description": "Per 1 februari gelden nieuwe regels voor constructieve veiligheid.",
+    "date": "2024-01-19",
+    "link": "/bibliotheek/bouwen/besluit-bouwwerken-leefomgeving",
+    "isNew": false
+  },
+  {
+    "id": "u4",
+    "type": "tool",
+    "title": "Nieuwe tool: Participatie-planner",
+    "description": "Plan en organiseer participatietrajecten met onze nieuwe interactieve tool.",
+    "date": "2024-01-17",
+    "link": "/tools/participatie-planner",
+    "isNew": false
+  }
+]
