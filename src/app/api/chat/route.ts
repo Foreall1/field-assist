@@ -10,10 +10,15 @@ import {
 } from '@/lib/ai-service';
 import { UserRole, Citation } from '@/lib/types';
 
-// Initialize OpenAI
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+// Lazy initialization of OpenAI client
+function getOpenAIClient() {
+  if (!process.env.OPENAI_API_KEY) {
+    throw new Error('OpenAI API key not configured');
+  }
+  return new OpenAI({
+    apiKey: process.env.OPENAI_API_KEY,
+  });
+}
 
 interface ChatRequest {
   query: string;
@@ -111,6 +116,8 @@ export async function POST(request: NextRequest) {
 
     // Generate citations from relevant articles
     const citations: Citation[] = extractCitations(relevantArticles);
+
+    const openai = getOpenAIClient();
 
     if (stream) {
       // Streaming response
