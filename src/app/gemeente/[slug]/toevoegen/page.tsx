@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -13,12 +13,16 @@ import {
   Trash2,
   Loader2,
   CheckCircle,
+  BookOpen,
+  Upload,
+  X,
+  File,
 } from "lucide-react";
 import { getGemeente } from "@/lib/data";
 import { useUser } from "@/contexts/UserContext";
 import { createClientComponentClient } from "@/lib/supabase";
 
-type ContentType = "proces" | "template" | "tip" | "contact";
+type ContentType = "proces" | "template" | "tip" | "contact" | "handboek";
 
 const contentTypes = [
   {
@@ -31,9 +35,16 @@ const contentTypes = [
   {
     id: "template" as ContentType,
     label: "Template",
-    description: "Document template",
+    description: "Document template met bestand",
     icon: FileText,
     color: "#33a370",
+  },
+  {
+    id: "handboek" as ContentType,
+    label: "Handboek",
+    description: "PDF handboek of handleiding",
+    icon: BookOpen,
+    color: "#2dd4bf",
   },
   {
     id: "tip" as ContentType,
@@ -74,9 +85,20 @@ export default function ToevoegenPage() {
   const [templateBeschrijving, setTemplateBeschrijving] = useState("");
   const [templateTip, setTemplateTip] = useState("");
   const [templateType, setTemplateType] = useState("DOCX");
+  const [templateFile, setTemplateFile] = useState<File | null>(null);
+  const templateFileRef = useRef<HTMLInputElement>(null);
+
+  // Handboek form state
+  const [handboekTitel, setHandboekTitel] = useState("");
+  const [handboekBeschrijving, setHandboekBeschrijving] = useState("");
+  const [handboekFile, setHandboekFile] = useState<File | null>(null);
+  const handboekFileRef = useRef<HTMLInputElement>(null);
 
   // Tip form state
   const [tipTekst, setTipTekst] = useState("");
+
+  // Upload state
+  const [uploadProgress, setUploadProgress] = useState(0);
 
   // Contact form state
   const [contactNaam, setContactNaam] = useState("");
@@ -142,6 +164,42 @@ export default function ToevoegenPage() {
     setProcesStappen(newStappen);
   };
 
+  // File upload functie
+  const uploadFile = async (file: File, folder: string): Promise<string | null> => {
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
+      const filePath = `${folder}/${user.id}/${fileName}`;
+
+      setUploadProgress(10);
+
+      const { error } = await supabase.storage
+        .from('documents')
+        .upload(filePath, file, {
+          cacheControl: '3600',
+          upsert: false,
+        });
+
+      setUploadProgress(80);
+
+      if (error) {
+        console.error('Upload error:', error);
+        throw error;
+      }
+
+      // Get public URL
+      const { data: urlData } = supabase.storage
+        .from('documents')
+        .getPublicUrl(filePath);
+
+      setUploadProgress(100);
+      return urlData.publicUrl;
+    } catch (err) {
+      console.error('Error uploading file:', err);
+      return null;
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
@@ -160,6 +218,14 @@ export default function ToevoegenPage() {
         });
         if (insertError) throw insertError;
       } else if (selectedType === "template") {
+        let fileUrl = null;
+        if (templateFile) {
+          fileUrl = await uploadFile(templateFile, 'templates');
+          if (!fileUrl) {
+            throw new Error('Bestand uploaden mislukt');
+          }
+        }
+
         const { error: insertError } = await supabase.from("templates").insert({
           gemeente_id: gemeenteId,
           titel: templateTitel,
@@ -169,6 +235,30 @@ export default function ToevoegenPage() {
           auteur_id: user.id,
           auteur_naam: user.name,
           vakgroep: "VTH",
+          file_url: fileUrl,
+        });
+        if (insertError) throw insertError;
+      } else if (selectedType === "handboek") {
+        if (!handboekFile) {
+          throw new Error('Selecteer een PDF bestand');
+        }
+
+        const fileUrl = await uploadFile(handboekFile, 'handboeken');
+        if (!fileUrl) {
+          throw new Error('Bestand uploaden mislukt');
+        }
+
+        // Count pages (approximate based on file size for now)
+        const approxPages = Math.ceil(handboekFile.size / 50000);
+
+        const { error: insertError } = await supabase.from("handboeken").insert({
+          gemeente_id: gemeenteId,
+          titel: handboekTitel,
+          beschrijving: handboekBeschrijving,
+          paginas: approxPages,
+          auteur_id: user.id,
+          auteur_naam: user.name,
+          file_url: fileUrl,
         });
         if (insertError) throw insertError;
       } else if (selectedType === "tip") {
@@ -408,6 +498,56 @@ export default function ToevoegenPage() {
                       <option value="PDF">PDF document</option>
                     </select>
                   </div>
+
+                  {/* File Upload */}
+                  <div>
+                    <label className="block text-sm font-medium text-[#1a2e3b] mb-2">
+                      Bestand uploaden
+                    </label>
+                    <input
+                      type="file"
+                      ref={templateFileRef}
+                      onChange={(e) => setTemplateFile(e.target.files?.[0] || null)}
+                      accept=".docx,.xlsx,.pdf,.doc,.xls"
+                      className="hidden"
+                    />
+                    {templateFile ? (
+                      <div className="flex items-center gap-3 p-4 bg-[#288978]/5 border border-[#288978]/20 rounded-xl">
+                        <File className="w-8 h-8 text-[#288978]" />
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-[#1a2e3b] truncate">{templateFile.name}</p>
+                          <p className="text-sm text-[#7a8a9a]">
+                            {(templateFile.size / 1024 / 1024).toFixed(2)} MB
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setTemplateFile(null);
+                            if (templateFileRef.current) templateFileRef.current.value = '';
+                          }}
+                          className="p-2 text-[#7a8a9a] hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                        >
+                          <X className="w-5 h-5" />
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => templateFileRef.current?.click()}
+                        className="w-full flex flex-col items-center justify-center gap-2 p-6 border-2 border-dashed border-[#e8ecf0] rounded-xl hover:border-[#288978]/50 hover:bg-[#288978]/5 transition-colors cursor-pointer"
+                      >
+                        <Upload className="w-8 h-8 text-[#7a8a9a]" />
+                        <span className="text-sm text-[#7a8a9a]">
+                          Klik om een bestand te selecteren
+                        </span>
+                        <span className="text-xs text-[#a8b5c4]">
+                          .docx, .xlsx, .pdf (max 10MB)
+                        </span>
+                      </button>
+                    )}
+                  </div>
+
                   <div>
                     <label className="block text-sm font-medium text-[#1a2e3b] mb-2">
                       Tip voor gebruik (optioneel)
@@ -419,6 +559,87 @@ export default function ToevoegenPage() {
                       placeholder="bijv. Vergeet niet de datum aan te passen"
                       className="w-full px-4 py-3 border border-[#e8ecf0] rounded-xl focus:ring-2 focus:ring-[#288978] focus:border-transparent"
                     />
+                  </div>
+                </>
+              )}
+
+              {/* Handboek Form */}
+              {selectedType === "handboek" && (
+                <>
+                  <div>
+                    <label className="block text-sm font-medium text-[#1a2e3b] mb-2">
+                      Titel van het handboek
+                    </label>
+                    <input
+                      type="text"
+                      value={handboekTitel}
+                      onChange={(e) => setHandboekTitel(e.target.value)}
+                      placeholder="bijv. VTH Handboek 2024"
+                      className="w-full px-4 py-3 border border-[#e8ecf0] rounded-xl focus:ring-2 focus:ring-[#288978] focus:border-transparent"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-[#1a2e3b] mb-2">
+                      Beschrijving
+                    </label>
+                    <textarea
+                      value={handboekBeschrijving}
+                      onChange={(e) => setHandboekBeschrijving(e.target.value)}
+                      placeholder="Beschrijf de inhoud van dit handboek"
+                      rows={3}
+                      className="w-full px-4 py-3 border border-[#e8ecf0] rounded-xl focus:ring-2 focus:ring-[#288978] focus:border-transparent resize-none"
+                      required
+                    />
+                  </div>
+
+                  {/* PDF Upload */}
+                  <div>
+                    <label className="block text-sm font-medium text-[#1a2e3b] mb-2">
+                      PDF uploaden *
+                    </label>
+                    <input
+                      type="file"
+                      ref={handboekFileRef}
+                      onChange={(e) => setHandboekFile(e.target.files?.[0] || null)}
+                      accept=".pdf"
+                      className="hidden"
+                    />
+                    {handboekFile ? (
+                      <div className="flex items-center gap-3 p-4 bg-[#2dd4bf]/5 border border-[#2dd4bf]/20 rounded-xl">
+                        <BookOpen className="w-8 h-8 text-[#2dd4bf]" />
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-[#1a2e3b] truncate">{handboekFile.name}</p>
+                          <p className="text-sm text-[#7a8a9a]">
+                            {(handboekFile.size / 1024 / 1024).toFixed(2)} MB
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setHandboekFile(null);
+                            if (handboekFileRef.current) handboekFileRef.current.value = '';
+                          }}
+                          className="p-2 text-[#7a8a9a] hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                        >
+                          <X className="w-5 h-5" />
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => handboekFileRef.current?.click()}
+                        className="w-full flex flex-col items-center justify-center gap-2 p-6 border-2 border-dashed border-[#e8ecf0] rounded-xl hover:border-[#2dd4bf]/50 hover:bg-[#2dd4bf]/5 transition-colors cursor-pointer"
+                      >
+                        <Upload className="w-8 h-8 text-[#7a8a9a]" />
+                        <span className="text-sm text-[#7a8a9a]">
+                          Klik om een PDF te selecteren
+                        </span>
+                        <span className="text-xs text-[#a8b5c4]">
+                          Alleen .pdf bestanden (max 50MB)
+                        </span>
+                      </button>
+                    )}
                   </div>
                 </>
               )}
@@ -519,6 +740,20 @@ export default function ToevoegenPage() {
 
               {/* Submit Button */}
               <div className="pt-4 border-t border-[#e8ecf0]">
+                {uploadProgress > 0 && uploadProgress < 100 && (
+                  <div className="mb-4">
+                    <div className="flex justify-between text-sm text-[#7a8a9a] mb-1">
+                      <span>Uploaden...</span>
+                      <span>{uploadProgress}%</span>
+                    </div>
+                    <div className="w-full h-2 bg-[#e8ecf0] rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-[#288978] transition-all duration-300"
+                        style={{ width: `${uploadProgress}%` }}
+                      />
+                    </div>
+                  </div>
+                )}
                 <button
                   type="submit"
                   disabled={isSubmitting}
@@ -527,7 +762,7 @@ export default function ToevoegenPage() {
                   {isSubmitting ? (
                     <>
                       <Loader2 className="w-5 h-5 animate-spin" />
-                      Bezig met opslaan...
+                      {uploadProgress > 0 ? 'Bestand uploaden...' : 'Bezig met opslaan...'}
                     </>
                   ) : (
                     <>

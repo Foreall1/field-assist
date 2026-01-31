@@ -25,6 +25,7 @@ interface ChatRequest {
   userRole?: UserRole;
   conversationHistory?: Array<{ role: 'user' | 'assistant'; content: string }>;
   stream?: boolean;
+  gemeenteId?: string; // Optional filter for gemeente-specific searches
 }
 
 // Search for relevant articles using vector similarity
@@ -72,10 +73,54 @@ async function keywordSearchArticles(query: string, limit: number = 5) {
   return data || [];
 }
 
+// Search in document chunks (uploaded documents)
+async function searchDocumentChunks(query: string, limit: number = 5, gemeenteId?: string) {
+  try {
+    const queryEmbedding = await createEmbedding(query);
+    const supabase = createServerClient();
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data, error } = await (supabase.rpc as any)('match_document_chunks', {
+      query_embedding: queryEmbedding,
+      match_threshold: 0.7,
+      match_count: limit,
+      filter_gemeente_id: gemeenteId || null,
+    });
+
+    if (error) {
+      console.error('Error searching document chunks:', error);
+      return [];
+    }
+
+    return data || [];
+  } catch (error) {
+    console.error('Error in searchDocumentChunks:', error);
+    return [];
+  }
+}
+
+// Keyword search in document chunks
+async function keywordSearchDocumentChunks(query: string, limit: number = 5) {
+  const supabase = createServerClient();
+
+  const { data, error } = await supabase
+    .from('document_chunks')
+    .select('id, source_type, source_id, title, content, gemeente_id')
+    .or(`title.ilike.%${query}%,content.ilike.%${query}%`)
+    .limit(limit);
+
+  if (error) {
+    console.error('Error in keyword search documents:', error);
+    return [];
+  }
+
+  return data || [];
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body: ChatRequest = await request.json();
-    const { query, userRole, conversationHistory = [], stream = false } = body;
+    const { query, userRole, conversationHistory = [], stream = false, gemeenteId } = body;
 
     if (!query) {
       return NextResponse.json(
@@ -98,9 +143,28 @@ export async function POST(request: NextRequest) {
       relevantArticles = await keywordSearchArticles(query);
     }
 
+    // Also search in uploaded documents
+    let relevantDocuments = await searchDocumentChunks(query, 5, gemeenteId);
+
+    if (relevantDocuments.length === 0) {
+      relevantDocuments = await keywordSearchDocumentChunks(query);
+    }
+
+    // Combine results - documents from the gemeente first, then general articles
+    const allRelevantContent = [
+      ...relevantDocuments.map((doc: { id: string; source_type: string; title: string; content: string; gemeente_id?: string }) => ({
+        id: doc.id,
+        title: doc.title,
+        content: doc.content,
+        category: doc.source_type,
+        source: doc.gemeente_id ? `Gemeente ${doc.gemeente_id}` : 'Geüpload document',
+      })),
+      ...relevantArticles,
+    ].slice(0, 8); // Limit total context
+
     // Build the system prompt with context
     const roleInstructions = getRoleInstructions(userRole);
-    const contextPrompt = buildContextPrompt(relevantArticles);
+    const contextPrompt = buildContextPrompt(allRelevantContent);
 
     const fullSystemPrompt = `${SYSTEM_PROMPT}${roleInstructions}${contextPrompt}`;
 
@@ -114,8 +178,8 @@ export async function POST(request: NextRequest) {
       { role: 'user', content: query },
     ];
 
-    // Generate citations from relevant articles
-    const citations: Citation[] = extractCitations(relevantArticles);
+    // Generate citations from all relevant content
+    const citations: Citation[] = extractCitations(allRelevantContent);
 
     const openai = getOpenAIClient();
 
