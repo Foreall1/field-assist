@@ -51,6 +51,16 @@ export const gemeenten: Gemeente[] = [
     totaleBijdragen: 22,
     laatsteUpdate: "3 uur geleden",
     color: "#F4A261"
+  },
+  {
+    id: "zwijndrecht",
+    naam: "Zwijndrecht",
+    provincie: "Zuid-Holland",
+    inwoners: 45000,
+    actieveFielders: 3,
+    totaleBijdragen: 12,
+    laatsteUpdate: "1 uur geleden",
+    color: "#0077B6"
   }
 ];
 
