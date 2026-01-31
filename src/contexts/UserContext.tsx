@@ -74,10 +74,14 @@ export function UserProvider({ children }: { children: ReactNode }) {
 
   // Initialize auth state
   useEffect(() => {
+    let isMounted = true;
+
     const initAuth = async () => {
       try {
         // Get initial session
         const { data: { session: initialSession } } = await supabase.auth.getSession();
+
+        if (!isMounted) return;
 
         if (initialSession?.user) {
           setSession(initialSession);
@@ -85,9 +89,13 @@ export function UserProvider({ children }: { children: ReactNode }) {
           await loadUserProfile(initialSession.user.id, initialSession.user.email || '');
         }
       } catch (err) {
+        // Ignore abort errors (caused by React Strict Mode)
+        if (err instanceof Error && err.name === 'AbortError') return;
         console.error('Error initializing auth:', err);
       } finally {
-        setIsLoading(false);
+        if (isMounted) {
+          setIsLoading(false);
+        }
       }
     };
 
@@ -96,6 +104,8 @@ export function UserProvider({ children }: { children: ReactNode }) {
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, currentSession) => {
+        if (!isMounted) return;
+
         setSession(currentSession);
         setSupabaseUser(currentSession?.user ?? null);
 
@@ -112,6 +122,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
     );
 
     return () => {
+      isMounted = false;
       subscription.unsubscribe();
     };
   }, []);
