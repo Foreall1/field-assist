@@ -21,6 +21,17 @@ import { useUser } from "@/contexts/UserContext";
 import { useProjects } from "@/contexts/ProjectContext";
 import { useToast } from "@/contexts/ToastContext";
 import { generateAIResponse } from "@/lib/ai-service";
+import { Citation } from "@/lib/types";
+
+// Lokale message type voor guest users
+interface LocalMessage {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  timestamp: string;
+  citations?: Citation[];
+  isStreaming?: boolean;
+}
 
 export default function AssistentPage() {
   const { user } = useUser();
@@ -41,6 +52,9 @@ export default function AssistentPage() {
   const [showProjectDropdown, setShowProjectDropdown] = useState(false);
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
 
+  // Lokale state voor guest users (zonder login)
+  const [localMessages, setLocalMessages] = useState<LocalMessage[]>([]);
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -58,6 +72,11 @@ export default function AssistentPage() {
   }, [inputValue]);
 
   const handleNewConversation = async () => {
+    if (!user) {
+      // Guest mode: clear local messages
+      setLocalMessages([]);
+      return;
+    }
     await createConversation(undefined, selectedProjectId || undefined);
     setSelectedProjectId(null);
   };
@@ -79,6 +98,51 @@ export default function AssistentPage() {
     const query = inputValue.trim();
     setInputValue("");
 
+    // Guest mode: gebruik lokale state
+    if (!user) {
+      // Add user message to local state
+      const userMessage: LocalMessage = {
+        id: `local-${Date.now()}`,
+        role: "user",
+        content: query,
+        timestamp: new Date().toISOString(),
+      };
+      setLocalMessages(prev => [...prev, userMessage]);
+
+      setIsTyping(true);
+
+      try {
+        // Generate AI response
+        const response = await generateAIResponse(query, undefined);
+
+        // Add assistant message to local state
+        const assistantMessage: LocalMessage = {
+          id: `local-${Date.now() + 1}`,
+          role: "assistant",
+          content: response.content,
+          timestamp: new Date().toISOString(),
+          citations: response.citations,
+        };
+        setLocalMessages(prev => [...prev, assistantMessage]);
+
+      } catch (error) {
+        console.error("Error generating response:", error);
+
+        // Add error message to local state
+        const errorMessage: LocalMessage = {
+          id: `local-${Date.now() + 1}`,
+          role: "assistant",
+          content: "Er is een fout opgetreden bij het genereren van een antwoord. Probeer het later opnieuw.",
+          timestamp: new Date().toISOString(),
+        };
+        setLocalMessages(prev => [...prev, errorMessage]);
+      } finally {
+        setIsTyping(false);
+      }
+      return;
+    }
+
+    // Logged-in mode: gebruik ChatContext
     // Create conversation if none exists
     let conversationId = currentConversation?.id;
     if (!conversationId) {
@@ -169,7 +233,8 @@ export default function AssistentPage() {
     "Hoe werkt de bezwaarprocedure?",
   ];
 
-  const messages = currentConversation?.messages || [];
+  // Gebruik lokale messages voor guests, anders conversation messages
+  const messages = user ? (currentConversation?.messages || []) : localMessages;
   const displayMessages = streamingContent
     ? messages.map((m, i) =>
         i === messages.length - 1 && m.role === "assistant"
