@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { User as SupabaseUser, Session } from '@supabase/supabase-js';
-import { createClientComponentClient } from '@/lib/supabase';
+import { getSupabaseClient } from '@/lib/supabase';
 import { User, UserPreferences, UserRole } from '@/lib/types';
 
 interface UserContextType {
@@ -32,7 +32,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  const supabase = createClientComponentClient();
+  const supabase = getSupabaseClient();
 
   // Load user profile from Supabase
   const loadUserProfile = async (userId: string, userEmail: string) => {
@@ -78,8 +78,16 @@ export function UserProvider({ children }: { children: ReactNode }) {
 
     const initAuth = async () => {
       try {
-        // Get initial session
-        const { data: { session: initialSession } } = await supabase.auth.getSession();
+        // Get initial session with timeout
+        const sessionPromise = supabase.auth.getSession();
+        const timeoutPromise = new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('Auth timeout')), 5000)
+        );
+
+        const { data: { session: initialSession } } = await Promise.race([
+          sessionPromise,
+          timeoutPromise
+        ]) as { data: { session: Session | null } };
 
         if (!isMounted) return;
 
@@ -89,9 +97,14 @@ export function UserProvider({ children }: { children: ReactNode }) {
           await loadUserProfile(initialSession.user.id, initialSession.user.email || '');
         }
       } catch (err) {
-        // Ignore abort errors (caused by React Strict Mode)
-        if (err instanceof Error && err.name === 'AbortError') return;
-        console.error('Error initializing auth:', err);
+        // Ignore abort errors and timeouts - just finish loading
+        if (err instanceof Error) {
+          if (err.name === 'AbortError' || err.message === 'Auth timeout') {
+            console.log('Auth init skipped:', err.message);
+          } else {
+            console.error('Error initializing auth:', err);
+          }
+        }
       } finally {
         if (isMounted) {
           setIsLoading(false);

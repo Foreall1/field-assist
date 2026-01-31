@@ -20,7 +20,7 @@ import {
 } from "lucide-react";
 import { getGemeente } from "@/lib/data";
 import { useUser } from "@/contexts/UserContext";
-import { createClientComponentClient } from "@/lib/supabase";
+import { getSupabaseClient } from "@/lib/supabase";
 
 type ContentType = "proces" | "template" | "tip" | "contact" | "handboek";
 
@@ -69,7 +69,7 @@ export default function ToevoegenPage() {
   const gemeenteId = params.slug as string;
   const gemeente = getGemeente(gemeenteId);
   const { user } = useUser();
-  const supabase = createClientComponentClient();
+  const supabase = getSupabaseClient();
 
   const [selectedType, setSelectedType] = useState<ContentType | null>(null);
 
