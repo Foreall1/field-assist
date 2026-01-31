@@ -48,10 +48,13 @@ FIELD Assist is een Next.js webapplicatie die professionals ondersteunt bij hun 
 - **Taal**: TypeScript
 - **Styling**: Tailwind CSS
 - **State Management**: React Context API
-- **Persistentie**: localStorage (demo modus)
+- **Backend**: Supabase (PostgreSQL + Auth)
+- **AI**: OpenAI GPT-4 met RAG
 - **Icons**: Lucide React
 
 ## Installatie
+
+### 1. Clone en installeer
 
 ```bash
 # Clone de repository
@@ -60,8 +63,43 @@ cd field-assist
 
 # Installeer dependencies
 npm install
+```
 
-# Start development server
+### 2. Supabase Setup
+
+1. Ga naar [supabase.com](https://supabase.com) en maak een nieuw project aan
+2. Kopieer de URL en API keys van **Settings > API**
+3. Maak het bestand `.env.local` aan (kopieer van `.env.example`):
+
+```bash
+cp .env.example .env.local
+```
+
+4. Vul de waarden in:
+
+```env
+NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key
+SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
+OPENAI_API_KEY=sk-your_openai_key
+```
+
+### 3. Database Setup
+
+1. Ga naar de **SQL Editor** in je Supabase dashboard
+2. Voer het script uit: `supabase/schema.sql`
+
+### 4. Data Seeden (optioneel)
+
+Vul de database met voorbeelddata:
+
+```bash
+npx ts-node scripts/seed-database.ts
+```
+
+### 5. Start de applicatie
+
+```bash
 npm run dev
 ```
 

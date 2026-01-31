@@ -20,7 +20,7 @@ import { useChat } from "@/contexts/ChatContext";
 import { useUser } from "@/contexts/UserContext";
 import { useProjects } from "@/contexts/ProjectContext";
 import { useToast } from "@/contexts/ToastContext";
-import { generateAIResponse, streamResponse } from "@/lib/ai-service";
+import { generateAIResponse } from "@/lib/ai-service";
 
 export default function AssistentPage() {
   const { user } = useUser();
@@ -33,7 +33,6 @@ export default function AssistentPage() {
     selectConversation,
     deleteConversation,
     addMessage,
-    updateMessage,
   } = useChat();
 
   const [inputValue, setInputValue] = useState("");
@@ -58,8 +57,8 @@ export default function AssistentPage() {
     }
   }, [inputValue]);
 
-  const handleNewConversation = () => {
-    createConversation(undefined, selectedProjectId || undefined);
+  const handleNewConversation = async () => {
+    await createConversation(undefined, selectedProjectId || undefined);
     setSelectedProjectId(null);
   };
 
@@ -67,9 +66,9 @@ export default function AssistentPage() {
     selectConversation(id);
   };
 
-  const handleDeleteConversation = (id: string, e: React.MouseEvent) => {
+  const handleDeleteConversation = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    deleteConversation(id);
+    await deleteConversation(id);
     success("Gesprek verwijderd");
   };
 
@@ -83,12 +82,13 @@ export default function AssistentPage() {
     // Create conversation if none exists
     let conversationId = currentConversation?.id;
     if (!conversationId) {
-      const newConv = createConversation(undefined, selectedProjectId || undefined);
+      const newConv = await createConversation(undefined, selectedProjectId || undefined);
+      if (!newConv) return;
       conversationId = newConv.id;
     }
 
     // Add user message
-    addMessage(conversationId, {
+    await addMessage(conversationId, {
       role: "user",
       content: query,
     });
@@ -100,32 +100,24 @@ export default function AssistentPage() {
       // Generate AI response
       const response = await generateAIResponse(query, user?.role);
 
-      // Add placeholder message for streaming
-      const assistantMessage = addMessage(conversationId, {
+      // Add assistant message with response
+      await addMessage(conversationId, {
         role: "assistant",
-        content: "",
+        content: response.content,
         citations: response.citations,
-        isStreaming: true,
       });
 
-      // Stream the response
-      let fullContent = "";
-      for await (const chunk of streamResponse(response.content, 15)) {
-        fullContent += chunk;
-        setStreamingContent(fullContent);
-      }
-
-      // Update message with full content
-      updateMessage(conversationId, assistantMessage.id, {
-        content: fullContent,
-        isStreaming: false,
-      });
-
-      setStreamingContent("");
     } catch (error) {
       console.error("Error generating response:", error);
+
+      // Add error message
+      await addMessage(conversationId, {
+        role: "assistant",
+        content: "Er is een fout opgetreden bij het genereren van een antwoord. Probeer het later opnieuw.",
+      });
     } finally {
       setIsTyping(false);
+      setStreamingContent("");
     }
   };
 

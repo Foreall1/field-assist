@@ -19,7 +19,7 @@ import { useToast } from "@/contexts/ToastContext";
 type Theme = "light" | "dark" | "system";
 
 export default function InstellingenPage() {
-  const { user, updatePreferences, logout } = useUser();
+  const { user, updatePreferences, signOut } = useUser();
   const { success, warning } = useToast();
 
   const [theme, setTheme] = useState<Theme>("system");
@@ -68,10 +68,10 @@ export default function InstellingenPage() {
     success("Data geëxporteerd", "Uw gegevens zijn gedownload.");
   };
 
-  const handleDeleteAccount = () => {
-    // Clear all data and logout
+  const handleDeleteAccount = async () => {
+    // Clear all data and sign out
     localStorage.clear();
-    logout();
+    await signOut();
     warning("Account verwijderd", "Al uw gegevens zijn gewist.");
     window.location.href = "/";
   };

@@ -62,7 +62,7 @@ const roleLabels: Record<string, string> = {
 export function Header() {
   const pathname = usePathname();
   const router = useRouter();
-  const { user, logout } = useUser();
+  const { user, signOut } = useUser();
   const [showNotifications, setShowNotifications] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -74,8 +74,8 @@ export function Header() {
     return pathname.startsWith(href);
   };
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    await signOut();
     setShowUserMenu(false);
     router.push("/");
   };

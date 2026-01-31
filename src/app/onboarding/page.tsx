@@ -67,7 +67,7 @@ const interests = [
 
 export default function OnboardingPage() {
   const router = useRouter();
-  const { login, completeOnboarding } = useUser();
+  const { updateUser, completeOnboarding } = useUser();
   const { success } = useToast();
 
   const [currentStep, setCurrentStep] = useState(1);
@@ -92,17 +92,17 @@ export default function OnboardingPage() {
     }
   };
 
-  const handleComplete = () => {
+  const handleComplete = async () => {
     if (!formData.name || !formData.role) return;
 
-    login({
+    await updateUser({
       name: formData.name,
       organization: formData.organization,
       role: formData.role as UserRole,
       specializations: formData.interests,
     });
 
-    completeOnboarding();
+    await completeOnboarding();
     success("Welkom bij FIELD Assist!", "Uw profiel is aangemaakt.");
     router.push("/");
   };
@@ -401,12 +401,12 @@ export default function OnboardingPage() {
         {/* Skip link */}
         <div className="text-center mt-6">
           <button
-            onClick={() => {
-              login({
+            onClick={async () => {
+              await updateUser({
                 name: "Gebruiker",
                 role: "vergunningverlener",
               });
-              completeOnboarding();
+              await completeOnboarding();
               router.push("/");
             }}
             className="text-sm text-[#8b97a5] hover:text-[#288978] transition-colors"

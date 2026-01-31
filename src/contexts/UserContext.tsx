@@ -1,17 +1,21 @@
 "use client";
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { User, UserPreferences } from '@/lib/types';
-import { userStorage, generateId } from '@/lib/storage';
+import { User as SupabaseUser, Session } from '@supabase/supabase-js';
+import { createClientComponentClient } from '@/lib/supabase';
+import { User, UserPreferences, UserRole } from '@/lib/types';
 
 interface UserContextType {
   user: User | null;
+  supabaseUser: SupabaseUser | null;
+  session: Session | null;
   isLoading: boolean;
-  login: (userData: Partial<User>) => void;
-  logout: () => void;
-  updateUser: (updates: Partial<User>) => void;
-  updatePreferences: (preferences: Partial<UserPreferences>) => void;
-  completeOnboarding: () => void;
+  signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
+  signUp: (email: string, password: string, userData: Partial<User>) => Promise<{ error: Error | null }>;
+  signOut: () => Promise<void>;
+  updateUser: (updates: Partial<User>) => Promise<void>;
+  updatePreferences: (preferences: Partial<UserPreferences>) => Promise<void>;
+  completeOnboarding: () => Promise<void>;
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
@@ -24,74 +28,226 @@ const defaultPreferences: UserPreferences = {
 
 export function UserProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
+  const [supabaseUser, setSupabaseUser] = useState<SupabaseUser | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Load user from localStorage on mount
-  useEffect(() => {
-    const storedUser = userStorage.get();
-    if (storedUser) {
-      setUser(storedUser);
-    }
-    setIsLoading(false);
-  }, []);
+  const supabase = createClientComponentClient();
 
-  const login = (userData: Partial<User>) => {
-    const newUser: User = {
-      id: generateId('user'),
-      name: userData.name || '',
-      email: userData.email || '',
-      role: userData.role || 'vergunningverlener',
-      organization: userData.organization || '',
-      avatar: userData.avatar,
-      preferences: userData.preferences || defaultPreferences,
-      specializations: userData.specializations || [],
-      createdAt: new Date().toISOString(),
-      onboardingComplete: false,
+  // Load user profile from Supabase
+  const loadUserProfile = async (userId: string) => {
+    try {
+      const { data: profile, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
+
+      if (error) {
+        console.error('Error loading profile:', error);
+        return null;
+      }
+
+      if (profile) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const p = profile as any;
+        const userData: User = {
+          id: p.id,
+          name: p.name || '',
+          email: supabaseUser?.email || '',
+          role: (p.role as UserRole) || 'vergunningverlener',
+          organization: p.organization || '',
+          avatar: p.avatar_url || undefined,
+          preferences: defaultPreferences,
+          specializations: p.specializations || [],
+          createdAt: p.created_at,
+          onboardingComplete: p.onboarding_complete || false,
+        };
+        setUser(userData);
+        return userData;
+      }
+    } catch (err) {
+      console.error('Error in loadUserProfile:', err);
+    }
+    return null;
+  };
+
+  // Initialize auth state
+  useEffect(() => {
+    const initAuth = async () => {
+      try {
+        // Get initial session
+        const { data: { session: initialSession } } = await supabase.auth.getSession();
+
+        if (initialSession?.user) {
+          setSession(initialSession);
+          setSupabaseUser(initialSession.user);
+          await loadUserProfile(initialSession.user.id);
+        }
+      } catch (err) {
+        console.error('Error initializing auth:', err);
+      } finally {
+        setIsLoading(false);
+      }
     };
 
-    setUser(newUser);
-    userStorage.set(newUser);
+    initAuth();
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, currentSession) => {
+        setSession(currentSession);
+        setSupabaseUser(currentSession?.user ?? null);
+
+        if (currentSession?.user) {
+          await loadUserProfile(currentSession.user.id);
+        } else {
+          setUser(null);
+        }
+
+        if (event === 'SIGNED_OUT') {
+          setUser(null);
+        }
+      }
+    );
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
+
+  const signIn = async (email: string, password: string) => {
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) {
+        return { error };
+      }
+
+      return { error: null };
+    } catch (err) {
+      return { error: err as Error };
+    }
   };
 
-  const logout = () => {
+  const signUp = async (email: string, password: string, userData: Partial<User>) => {
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            name: userData.name,
+          },
+        },
+      });
+
+      if (error) {
+        return { error };
+      }
+
+      // Create profile if user was created
+      if (data.user) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const { error: profileError } = await (supabase.from('profiles') as any)
+          .upsert({
+            id: data.user.id,
+            name: userData.name,
+            role: userData.role || 'vergunningverlener',
+            organization: userData.organization,
+            specializations: userData.specializations || [],
+            onboarding_complete: false,
+          });
+
+        if (profileError) {
+          console.error('Error creating profile:', profileError);
+        }
+      }
+
+      return { error: null };
+    } catch (err) {
+      return { error: err as Error };
+    }
+  };
+
+  const signOut = async () => {
+    await supabase.auth.signOut();
     setUser(null);
-    userStorage.remove();
+    setSupabaseUser(null);
+    setSession(null);
   };
 
-  const updateUser = (updates: Partial<User>) => {
+  const updateUser = async (updates: Partial<User>) => {
     if (!user) return;
 
-    const updatedUser = { ...user, ...updates };
-    setUser(updatedUser);
-    userStorage.set(updatedUser);
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error } = await (supabase.from('profiles') as any)
+        .update({
+          name: updates.name,
+          role: updates.role,
+          organization: updates.organization,
+          avatar_url: updates.avatar,
+          specializations: updates.specializations,
+        })
+        .eq('id', user.id);
+
+      if (error) {
+        console.error('Error updating profile:', error);
+        return;
+      }
+
+      setUser({ ...user, ...updates });
+    } catch (err) {
+      console.error('Error in updateUser:', err);
+    }
   };
 
-  const updatePreferences = (preferences: Partial<UserPreferences>) => {
+  const updatePreferences = async (preferences: Partial<UserPreferences>) => {
     if (!user) return;
 
+    // For now, store preferences locally
+    // Could be stored in Supabase in a preferences column
     const updatedUser = {
       ...user,
       preferences: { ...user.preferences, ...preferences },
     };
     setUser(updatedUser);
-    userStorage.set(updatedUser);
   };
 
-  const completeOnboarding = () => {
+  const completeOnboarding = async () => {
     if (!user) return;
 
-    const updatedUser = { ...user, onboardingComplete: true };
-    setUser(updatedUser);
-    userStorage.set(updatedUser);
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error } = await (supabase.from('profiles') as any)
+        .update({ onboarding_complete: true })
+        .eq('id', user.id);
+
+      if (error) {
+        console.error('Error completing onboarding:', error);
+        return;
+      }
+
+      setUser({ ...user, onboardingComplete: true });
+    } catch (err) {
+      console.error('Error in completeOnboarding:', err);
+    }
   };
 
   return (
     <UserContext.Provider
       value={{
         user,
+        supabaseUser,
+        session,
         isLoading,
-        login,
-        logout,
+        signIn,
+        signUp,
+        signOut,
         updateUser,
         updatePreferences,
         completeOnboarding,
