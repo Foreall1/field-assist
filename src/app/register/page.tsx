@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useUser } from '@/contexts/UserContext';
 import { UserRole } from '@/lib/types';
 import {
@@ -29,7 +30,8 @@ export default function RegisterPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
 
-  const { signUp } = useUser();
+  const { signUp, signIn } = useUser();
+  const router = useRouter();
 
   const handleStep1 = (e: React.FormEvent) => {
     e.preventDefault();
@@ -70,6 +72,16 @@ export default function RegisterPage() {
         return;
       }
 
+      // Try to sign in directly (works if email verification is disabled)
+      const { error: signInError } = await signIn(email, password);
+
+      if (!signInError) {
+        // Successfully logged in, redirect to home
+        router.push('/');
+        return;
+      }
+
+      // If sign in failed (email verification required), show success message
       setIsSuccess(true);
     } catch {
       setError('Er is iets misgegaan. Probeer het opnieuw.');

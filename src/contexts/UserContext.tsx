@@ -35,7 +35,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const supabase = createClientComponentClient();
 
   // Load user profile from Supabase
-  const loadUserProfile = async (userId: string) => {
+  const loadUserProfile = async (userId: string, userEmail: string) => {
     try {
       const { data: profile, error } = await supabase
         .from('profiles')
@@ -54,7 +54,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
         const userData: User = {
           id: p.id,
           name: p.name || '',
-          email: supabaseUser?.email || '',
+          email: p.email || userEmail || '',
           role: (p.role as UserRole) || 'vergunningverlener',
           organization: p.organization || '',
           avatar: p.avatar_url || undefined,
@@ -82,7 +82,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
         if (initialSession?.user) {
           setSession(initialSession);
           setSupabaseUser(initialSession.user);
-          await loadUserProfile(initialSession.user.id);
+          await loadUserProfile(initialSession.user.id, initialSession.user.email || '');
         }
       } catch (err) {
         console.error('Error initializing auth:', err);
@@ -100,7 +100,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
         setSupabaseUser(currentSession?.user ?? null);
 
         if (currentSession?.user) {
-          await loadUserProfile(currentSession.user.id);
+          await loadUserProfile(currentSession.user.id, currentSession.user.email || '');
         } else {
           setUser(null);
         }
