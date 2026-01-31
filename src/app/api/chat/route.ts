@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import { createServerClient } from '@/lib/supabase';
+import { createAPIRouteClient } from '@/lib/supabase-server';
 import { createEmbedding } from '@/lib/embeddings';
 import {
   SYSTEM_PROMPT,
@@ -119,6 +120,17 @@ async function keywordSearchDocumentChunks(query: string, limit: number = 5) {
 
 export async function POST(request: NextRequest) {
   try {
+    // Authenticatie check - alleen ingelogde gebruikers
+    const supabaseAuth = await createAPIRouteClient();
+    const { data: { session } } = await supabaseAuth.auth.getSession();
+
+    if (!session) {
+      return NextResponse.json(
+        { error: 'Unauthorized - Je moet ingelogd zijn om de chat te gebruiken' },
+        { status: 401 }
+      );
+    }
+
     const body: ChatRequest = await request.json();
     const { query, userRole, conversationHistory = [], stream = false, gemeenteId } = body;
 

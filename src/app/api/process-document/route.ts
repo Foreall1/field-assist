@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@/lib/supabase';
+import { createAPIRouteClient } from '@/lib/supabase-server';
 import { createEmbedding } from '@/lib/embeddings';
 
 interface ProcessRequest {
@@ -39,6 +40,17 @@ function splitIntoChunks(text: string, maxChunkSize: number = 1000): string[] {
 
 export async function POST(request: NextRequest) {
   try {
+    // Authenticatie check - alleen ingelogde gebruikers
+    const supabaseAuth = await createAPIRouteClient();
+    const { data: { session } } = await supabaseAuth.auth.getSession();
+
+    if (!session) {
+      return NextResponse.json(
+        { error: 'Unauthorized - Je moet ingelogd zijn om documenten te verwerken' },
+        { status: 401 }
+      );
+    }
+
     const body: ProcessRequest = await request.json();
     const { documentId, documentType, title, content, gemeenteId } = body;
 

@@ -1,11 +1,11 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
-// Routes die authenticatie vereisen
-const protectedRoutes = [
-  '/dashboard',
-  '/projecten',
-  // '/assistent', // Tijdelijk uitgeschakeld voor testen
+// Routes die GEEN authenticatie vereisen (publiek toegankelijk)
+const publicRoutes = [
+  '/',                  // Homepage met gemeente overzicht
+  '/forgot-password',   // Wachtwoord vergeten
+  '/reset-password',    // Wachtwoord resetten
 ]
 
 // Routes die alleen toegankelijk zijn als je NIET ingelogd bent
@@ -70,26 +70,27 @@ export async function middleware(request: NextRequest) {
   const { data: { session } } = await supabase.auth.getSession()
   const pathname = request.nextUrl.pathname
 
-  // Check if current route is protected
-  const isProtectedRoute = protectedRoutes.some(route =>
-    pathname.startsWith(route)
+  // Check if current route is public (no auth required)
+  const isPublicRoute = publicRoutes.some(route =>
+    pathname === route
   )
 
-  // Check if current route is an auth route
+  // Check if current route is an auth route (login/register)
   const isAuthRoute = authRoutes.some(route =>
     pathname.startsWith(route)
   )
 
+  // Redirect to home if accessing auth routes while logged in
+  if (isAuthRoute && session) {
+    return NextResponse.redirect(new URL('/', request.url))
+  }
+
   // Redirect to login if accessing protected route without session
-  if (isProtectedRoute && !session) {
+  // (alle routes behalve publieke en auth routes zijn beschermd)
+  if (!isPublicRoute && !isAuthRoute && !session) {
     const loginUrl = new URL('/login', request.url)
     loginUrl.searchParams.set('redirect', pathname)
     return NextResponse.redirect(loginUrl)
-  }
-
-  // Redirect to home (gemeenten) if accessing auth routes while logged in
-  if (isAuthRoute && session) {
-    return NextResponse.redirect(new URL('/', request.url))
   }
 
   return response
