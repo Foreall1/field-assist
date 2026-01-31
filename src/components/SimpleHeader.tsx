@@ -9,7 +9,7 @@ import { useUser } from "@/contexts/UserContext";
 export function SimpleHeader() {
   const pathname = usePathname();
   const router = useRouter();
-  const { user, signOut, isLoading } = useUser();
+  const { user, signOut } = useUser();
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -90,10 +90,8 @@ export function SimpleHeader() {
               <span className="hidden sm:inline">Netwerk</span>
             </Link>
 
-            {/* Auth Section */}
-            {isLoading ? (
-              <div className="w-9 h-9 rounded-xl bg-[#f4f6f8] animate-pulse" />
-            ) : user ? (
+            {/* Auth Section - Show login/register immediately, profile only when logged in */}
+            {user ? (
               /* Logged In - Profile Menu */
               <div className="relative" ref={menuRef}>
                 <button
