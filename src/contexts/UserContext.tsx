@@ -76,45 +76,8 @@ export function UserProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let isMounted = true;
 
-    const initAuth = async () => {
-      try {
-        // Get initial session with timeout
-        const sessionPromise = supabase.auth.getSession();
-        const timeoutPromise = new Promise((_, reject) =>
-          setTimeout(() => reject(new Error('Auth timeout')), 5000)
-        );
-
-        const { data: { session: initialSession } } = await Promise.race([
-          sessionPromise,
-          timeoutPromise
-        ]) as { data: { session: Session | null } };
-
-        if (!isMounted) return;
-
-        if (initialSession?.user) {
-          setSession(initialSession);
-          setSupabaseUser(initialSession.user);
-          await loadUserProfile(initialSession.user.id, initialSession.user.email || '');
-        }
-      } catch (err) {
-        // Ignore abort errors and timeouts - just finish loading
-        if (err instanceof Error) {
-          if (err.name === 'AbortError' || err.message === 'Auth timeout') {
-            console.log('Auth init skipped:', err.message);
-          } else {
-            console.error('Error initializing auth:', err);
-          }
-        }
-      } finally {
-        if (isMounted) {
-          setIsLoading(false);
-        }
-      }
-    };
-
-    initAuth();
-
-    // Listen for auth changes
+    // STAP 1: Eerst listener registreren VOOR getSession
+    // Dit voorkomt race conditions waar auth events gemist worden
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, currentSession) => {
         if (!isMounted) return;
@@ -128,11 +91,37 @@ export function UserProvider({ children }: { children: ReactNode }) {
           setUser(null);
         }
 
-        if (event === 'SIGNED_OUT') {
-          setUser(null);
-        }
+        // Zet loading op false na ELKE auth state change
+        setIsLoading(false);
       }
     );
+
+    // STAP 2: Dan pas session ophalen
+    const initAuth = async () => {
+      try {
+        const { data: { session: initialSession } } = await supabase.auth.getSession();
+
+        if (!isMounted) return;
+
+        if (initialSession?.user) {
+          setSession(initialSession);
+          setSupabaseUser(initialSession.user);
+          await loadUserProfile(initialSession.user.id, initialSession.user.email || '');
+        }
+      } catch (err) {
+        // Negeer AbortError volledig - dit is normaal gedrag bij unmount
+        if (err instanceof Error && err.name === 'AbortError') {
+          return;
+        }
+        console.error('Auth error:', err);
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    initAuth();
 
     return () => {
       isMounted = false;
