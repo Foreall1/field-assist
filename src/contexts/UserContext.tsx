@@ -82,12 +82,16 @@ export function UserProvider({ children }: { children: ReactNode }) {
       async (event, currentSession) => {
         if (!isMounted) return;
 
+        // Debug log
+        console.log('Auth event:', event, 'Session:', !!currentSession);
+
         setSession(currentSession);
         setSupabaseUser(currentSession?.user ?? null);
 
         if (currentSession?.user) {
           await loadUserProfile(currentSession.user.id, currentSession.user.email || '');
-        } else {
+        } else if (event === 'SIGNED_OUT') {
+          // Alleen user wissen bij expliciete uitlog, niet bij null session tijdens navigatie
           setUser(null);
         }
 
