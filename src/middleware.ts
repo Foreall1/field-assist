@@ -5,7 +5,7 @@ import { NextResponse, type NextRequest } from 'next/server'
 const protectedRoutes = [
   '/dashboard',
   '/projecten',
-  '/assistent',
+  // '/assistent', // Tijdelijk uitgeschakeld voor testen
 ]
 
 // Routes die alleen toegankelijk zijn als je NIET ingelogd bent
