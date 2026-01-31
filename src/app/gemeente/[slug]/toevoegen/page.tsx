@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useRef } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useState, useRef, useEffect } from "react";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -65,12 +65,21 @@ const contentTypes = [
 export default function ToevoegenPage() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const gemeenteId = params.slug as string;
   const gemeente = getGemeente(gemeenteId);
   const { user } = useUser();
   const supabase = createClientComponentClient();
 
   const [selectedType, setSelectedType] = useState<ContentType | null>(null);
+
+  // Pre-select type from URL parameter
+  useEffect(() => {
+    const typeParam = searchParams.get('type') as ContentType | null;
+    if (typeParam && contentTypes.some(t => t.id === typeParam)) {
+      setSelectedType(typeParam);
+    }
+  }, [searchParams]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [error, setError] = useState("");

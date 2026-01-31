@@ -14,6 +14,7 @@ import {
   Clock,
   ChevronRight,
   MapPin,
+  Plus,
 } from "lucide-react";
 import {
   gemeenten,
@@ -22,8 +23,10 @@ import {
   getTrendingTemplates,
   type Gemeente,
 } from "@/lib/data";
+import { useUser } from "@/contexts/UserContext";
 
 export default function HomePage() {
+  const { user } = useUser();
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<Gemeente[]>([]);
   const [showResults, setShowResults] = useState(false);
@@ -67,6 +70,40 @@ export default function HomePage() {
         <div className="absolute top-40 right-20 w-96 h-96 bg-[#33a370]/5 rounded-full blur-3xl" />
 
         <div className="relative max-w-6xl mx-auto px-6 lg:px-8">
+          {/* Welcome Banner for logged in users */}
+          {user && (
+            <div className="mb-8 animate-fade-in-down">
+              <div className="bg-white rounded-2xl shadow-lg border border-[#e8ecf0] p-6">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                  <div>
+                    <h2 className="text-xl font-bold text-[#1a2e3b]">
+                      Welkom terug, {user.name?.split(' ')[0] || 'Fielder'}! 👋
+                    </h2>
+                    <p className="text-[#7a8a9a] mt-1">
+                      Wat wil je vandaag doen?
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap gap-3">
+                    <Link
+                      href="/gemeente/zwijndrecht/toevoegen"
+                      className="inline-flex items-center gap-2 px-4 py-2.5 bg-[#288978] text-white font-medium rounded-xl hover:bg-[#1e6b5c] transition-colors"
+                    >
+                      <Plus className="w-4 h-4" />
+                      Kennis toevoegen
+                    </Link>
+                    <Link
+                      href="/gemeente/zwijndrecht"
+                      className="inline-flex items-center gap-2 px-4 py-2.5 border border-[#e8ecf0] text-[#415161] font-medium rounded-xl hover:bg-[#f4f6f8] transition-colors"
+                    >
+                      <Building2 className="w-4 h-4" />
+                      Zwijndrecht
+                    </Link>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Badge */}
           <div className="flex justify-center mb-8 animate-fade-in-down">
             <div className="inline-flex items-center gap-2 px-4 py-2 bg-white rounded-full shadow-sm border border-[#e8ecf0]">

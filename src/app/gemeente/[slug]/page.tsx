@@ -166,29 +166,37 @@ export default function GemeenteDashboard() {
           {/* Content Cards Grid */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
             {[
-              { href: `processen`, icon: ClipboardList, label: "Processen", count: content.processen.length, color: "#288978" },
-              { href: `templates`, icon: FileText, label: "Templates", count: content.templates.length, color: "#33a370" },
-              { href: `handboeken`, icon: BookOpen, label: "Handboeken", count: content.handboeken.length, color: "#2dd4bf" },
-              { href: `contacten`, icon: UserCircle, label: "Contacten", count: content.contacten.length, color: "#0ea5e9" },
+              { href: `processen`, addType: "proces", icon: ClipboardList, label: "Processen", count: content.processen.length, color: "#288978" },
+              { href: `templates`, addType: "template", icon: FileText, label: "Templates", count: content.templates.length, color: "#33a370" },
+              { href: `handboeken`, addType: "handboek", icon: BookOpen, label: "Handboeken", count: content.handboeken.length, color: "#2dd4bf" },
+              { href: `contacten`, addType: "contact", icon: UserCircle, label: "Contacten", count: content.contacten.length, color: "#0ea5e9" },
             ].map((item) => (
-              <Link
-                key={item.href}
-                href={`/gemeente/${gemeenteId}/${item.href}`}
-                className="card-field-interactive group"
-              >
-                <div
-                  className="w-12 h-12 rounded-xl flex items-center justify-center mb-4 transition-transform group-hover:scale-110"
-                  style={{ backgroundColor: `${item.color}15` }}
+              <div key={item.href} className="relative">
+                <Link
+                  href={`/gemeente/${gemeenteId}/${item.href}`}
+                  className="card-field-interactive group block"
                 >
-                  <item.icon className="w-6 h-6" style={{ color: item.color }} />
-                </div>
-                <h3 className="font-semibold text-[#1a2e3b] mb-1 group-hover:text-[#288978] transition-colors">
-                  {item.label}
-                </h3>
-                <p className="text-3xl font-bold" style={{ color: item.color }}>
-                  {item.count}
-                </p>
-              </Link>
+                  <div
+                    className="w-12 h-12 rounded-xl flex items-center justify-center mb-4 transition-transform group-hover:scale-110"
+                    style={{ backgroundColor: `${item.color}15` }}
+                  >
+                    <item.icon className="w-6 h-6" style={{ color: item.color }} />
+                  </div>
+                  <h3 className="font-semibold text-[#1a2e3b] mb-1 group-hover:text-[#288978] transition-colors">
+                    {item.label}
+                  </h3>
+                  <p className="text-3xl font-bold" style={{ color: item.color }}>
+                    {item.count}
+                  </p>
+                </Link>
+                <Link
+                  href={`/gemeente/${gemeenteId}/toevoegen?type=${item.addType}`}
+                  className="absolute top-3 right-3 w-8 h-8 rounded-lg bg-white border border-[#e8ecf0] flex items-center justify-center text-[#7a8a9a] hover:text-[#288978] hover:border-[#288978] transition-colors shadow-sm"
+                  title={`${item.label.slice(0, -1)} toevoegen`}
+                >
+                  <Plus className="w-4 h-4" />
+                </Link>
+              </div>
             ))}
           </div>
 
