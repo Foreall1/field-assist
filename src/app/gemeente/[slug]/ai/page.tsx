@@ -9,19 +9,14 @@ import {
   Send,
   FileText,
   User,
-  Scale,
   Loader2,
   ChevronRight,
   MessageSquare,
+  BookOpen,
+  Files,
 } from "lucide-react";
-import {
-  getGemeente,
-  getGemeenteContent,
-  rotterdamAIResponses,
-  amsterdamAIResponses,
-  findAIResponse,
-  defaultAIResponse,
-} from "@/lib/data";
+import { getGemeente } from "@/lib/data";
+import { getSupabaseClient } from "@/lib/supabase";
 
 interface Message {
   id: string;
@@ -30,26 +25,72 @@ interface Message {
   bronnen?: { type: string; titel: string; extra?: string }[];
 }
 
+interface Document {
+  id: string;
+  titel: string;
+  type: "template" | "handboek" | "proces";
+}
+
 export default function GemeenteAIPage() {
   const params = useParams();
   const searchParams = useSearchParams();
   const gemeenteId = params.slug as string;
   const initialVraag = searchParams.get("vraag");
+  const documentId = searchParams.get("document");
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [documents, setDocuments] = useState<Document[]>([]);
+  const [selectedDocument, setSelectedDocument] = useState<string | "all">("all");
+  const [documentCount, setDocumentCount] = useState(0);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const gemeente = getGemeente(gemeenteId);
-  const content = getGemeenteContent(gemeenteId);
+  const supabase = getSupabaseClient();
 
-  const aiResponses =
-    gemeenteId === "rotterdam"
-      ? rotterdamAIResponses
-      : gemeenteId === "amsterdam"
-      ? amsterdamAIResponses
-      : [];
+  // Load documents for this gemeente
+  useEffect(() => {
+    async function loadDocuments() {
+      try {
+        // Load templates
+        const { data: templates } = await supabase
+          .from("templates")
+          .select("id, titel")
+          .eq("gemeente_id", gemeenteId);
+
+        // Load handboeken
+        const { data: handboeken } = await supabase
+          .from("handboeken")
+          .select("id, titel")
+          .eq("gemeente_id", gemeenteId);
+
+        // Load processen
+        const { data: processen } = await supabase
+          .from("processen")
+          .select("id, titel")
+          .eq("gemeente_id", gemeenteId);
+
+        const allDocs: Document[] = [
+          ...(templates || []).map((t) => ({ ...t, type: "template" as const })),
+          ...(handboeken || []).map((h) => ({ ...h, type: "handboek" as const })),
+          ...(processen || []).map((p) => ({ ...p, type: "proces" as const })),
+        ];
+
+        setDocuments(allDocs);
+        setDocumentCount(allDocs.length);
+
+        // If document ID is in URL, select it
+        if (documentId && allDocs.find((d) => d.id === documentId)) {
+          setSelectedDocument(documentId);
+        }
+      } catch (error) {
+        console.error("Error loading documents:", error);
+      }
+    }
+
+    loadDocuments();
+  }, [gemeenteId, documentId, supabase]);
 
   useEffect(() => {
     if (initialVraag && messages.length === 0) {
@@ -75,19 +116,62 @@ export default function GemeenteAIPage() {
     setInputValue("");
     setIsLoading(true);
 
-    await new Promise((resolve) => setTimeout(resolve, 1500));
+    try {
+      // Build conversation history
+      const conversationHistory = messages.map((m) => ({
+        role: m.role,
+        content: m.content,
+      }));
 
-    const response = findAIResponse(text, aiResponses) || defaultAIResponse;
+      // Call the chat API with gemeente filter
+      const response = await fetch("/api/chat", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          query: text,
+          gemeenteId: gemeenteId,
+          conversationHistory,
+          stream: false,
+        }),
+      });
 
-    const assistantMessage: Message = {
-      id: (Date.now() + 1).toString(),
-      role: "assistant",
-      content: response.antwoord,
-      bronnen: response.bronnen,
-    };
+      if (!response.ok) {
+        throw new Error("Chat API error");
+      }
 
-    setMessages((prev) => [...prev, assistantMessage]);
-    setIsLoading(false);
+      const data = await response.json();
+
+      // Transform citations to bronnen format
+      const bronnen = data.citations?.map((citation: { title: string; category: string; source?: string }) => ({
+        type: citation.category || "Document",
+        titel: citation.title,
+        extra: citation.source,
+      })) || [];
+
+      const assistantMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        role: "assistant",
+        content: data.content || "Sorry, ik kon geen antwoord genereren.",
+        bronnen: bronnen.length > 0 ? bronnen : undefined,
+      };
+
+      setMessages((prev) => [...prev, assistantMessage]);
+    } catch (error) {
+      console.error("Error sending message:", error);
+
+      const errorMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        role: "assistant",
+        content:
+          "Er ging iets mis bij het verwerken van je vraag. Controleer of de OpenAI API key is geconfigureerd en probeer het opnieuw.",
+      };
+
+      setMessages((prev) => [...prev, errorMessage]);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -95,7 +179,7 @@ export default function GemeenteAIPage() {
     handleSendMessage(inputValue);
   };
 
-  if (!gemeente || !content) {
+  if (!gemeente) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#fafbfc]">
         <div className="text-center">
@@ -109,11 +193,29 @@ export default function GemeenteAIPage() {
   }
 
   const suggestedQuestions = [
-    { title: "Welstandsadvies", description: "Procedure en termijnen", question: "Hoe vraag ik een welstandsadvies aan?" },
-    { title: "Vergunningprocedure", description: "Stappen en doorlooptijd", question: "Wat is de vergunningprocedure?" },
-    { title: "Handhaving", description: "Proces en templates", question: "Hoe start ik een handhavingstraject?" },
-    { title: "Contacten", description: "Wie benader ik?", question: "Wie moet ik benaderen voor juridische vragen?" },
+    {
+      title: "Documentatie",
+      description: "Wat staat er in de docs?",
+      question: "Geef een overzicht van de beschikbare documentatie",
+    },
+    {
+      title: "Processen",
+      description: "Hoe werkt het?",
+      question: "Welke processen zijn er beschikbaar?",
+    },
+    {
+      title: "Templates",
+      description: "Welke sjablonen?",
+      question: "Welke templates kan ik gebruiken?",
+    },
+    {
+      title: "Samenvatting",
+      description: "Kort overzicht",
+      question: "Geef een samenvatting van de belangrijkste informatie",
+    },
   ];
+
+  const selectedDocumentInfo = documents.find((d) => d.id === selectedDocument);
 
   return (
     <div className="min-h-screen bg-[#fafbfc] flex flex-col">
@@ -133,7 +235,7 @@ export default function GemeenteAIPage() {
                   className="w-11 h-11 rounded-xl flex items-center justify-center shadow-lg text-white font-bold text-lg"
                   style={{
                     backgroundColor: gemeente.color,
-                    boxShadow: `0 8px 16px ${gemeente.color}40`
+                    boxShadow: `0 8px 16px ${gemeente.color}40`,
                   }}
                 >
                   {gemeente.naam.charAt(0)}
@@ -141,21 +243,65 @@ export default function GemeenteAIPage() {
                 <div>
                   <h1 className="font-bold text-[#1a2e3b]">{gemeente.naam} AI</h1>
                   <p className="text-sm text-[#7a8a9a]">
-                    Zoekt in alle {gemeente.naam} kennis
+                    {selectedDocument === "all"
+                      ? `Zoekt in alle ${documentCount} documenten`
+                      : `Chat met: ${selectedDocumentInfo?.titel}`}
                   </p>
                 </div>
               </div>
             </div>
 
-            <div className="hidden sm:flex items-center gap-2 text-sm text-[#7a8a9a]">
-              <span className="flex items-center gap-1.5 px-3 py-1.5 bg-[#f4f6f8] rounded-lg">
-                <FileText className="w-3.5 h-3.5 text-[#288978]" />
-                {content.processen.length + content.templates.length} docs
-              </span>
-              <span className="flex items-center gap-1.5 px-3 py-1.5 bg-[#f4f6f8] rounded-lg">
-                <Scale className="w-3.5 h-3.5 text-[#288978]" />
-                Beleid
-              </span>
+            <div className="flex items-center gap-2">
+              {/* Document Selector */}
+              {documents.length > 0 && (
+                <select
+                  value={selectedDocument}
+                  onChange={(e) => setSelectedDocument(e.target.value)}
+                  className="text-sm px-3 py-2 bg-[#f4f6f8] border border-[#e8ecf0] rounded-lg focus:outline-none focus:border-[#288978] text-[#415161]"
+                >
+                  <option value="all">Alle documenten ({documentCount})</option>
+                  {documents.filter((d) => d.type === "template").length > 0 && (
+                    <optgroup label="Templates">
+                      {documents
+                        .filter((d) => d.type === "template")
+                        .map((doc) => (
+                          <option key={doc.id} value={doc.id}>
+                            {doc.titel}
+                          </option>
+                        ))}
+                    </optgroup>
+                  )}
+                  {documents.filter((d) => d.type === "handboek").length > 0 && (
+                    <optgroup label="Handboeken">
+                      {documents
+                        .filter((d) => d.type === "handboek")
+                        .map((doc) => (
+                          <option key={doc.id} value={doc.id}>
+                            {doc.titel}
+                          </option>
+                        ))}
+                    </optgroup>
+                  )}
+                  {documents.filter((d) => d.type === "proces").length > 0 && (
+                    <optgroup label="Processen">
+                      {documents
+                        .filter((d) => d.type === "proces")
+                        .map((doc) => (
+                          <option key={doc.id} value={doc.id}>
+                            {doc.titel}
+                          </option>
+                        ))}
+                    </optgroup>
+                  )}
+                </select>
+              )}
+
+              <div className="hidden sm:flex items-center gap-2 text-sm text-[#7a8a9a]">
+                <span className="flex items-center gap-1.5 px-3 py-1.5 bg-[#f4f6f8] rounded-lg">
+                  <FileText className="w-3.5 h-3.5 text-[#288978]" />
+                  {documentCount} docs
+                </span>
+              </div>
             </div>
           </div>
         </div>
@@ -172,7 +318,7 @@ export default function GemeenteAIPage() {
                   className="w-24 h-24 rounded-3xl flex items-center justify-center shadow-2xl animate-fade-in"
                   style={{
                     backgroundColor: gemeente.color,
-                    boxShadow: `0 20px 40px ${gemeente.color}40`
+                    boxShadow: `0 20px 40px ${gemeente.color}40`,
                   }}
                 >
                   <Sparkles className="w-12 h-12 text-white" />
@@ -182,10 +328,37 @@ export default function GemeenteAIPage() {
               <h2 className="text-2xl font-bold text-[#1a2e3b] mb-3 animate-fade-in-up">
                 {gemeente.naam} AI
               </h2>
-              <p className="text-[#7a8a9a] max-w-md mb-10 leading-relaxed animate-fade-in-up delay-100">
-                Stel vragen over processen, templates en werkwijzen bij {gemeente.naam}.
-                Ik zoek in alle beschikbare FIELD kennis.
+              <p className="text-[#7a8a9a] max-w-md mb-6 leading-relaxed animate-fade-in-up delay-100">
+                Stel vragen over de geüploade documenten, processen en templates
+                bij {gemeente.naam}.
               </p>
+
+              {/* Document info */}
+              {documentCount > 0 ? (
+                <div className="flex items-center gap-4 mb-10 animate-fade-in-up delay-150">
+                  <div className="flex items-center gap-2 px-4 py-2 bg-[#288978]/10 text-[#288978] rounded-lg">
+                    <Files className="w-4 h-4" />
+                    <span className="text-sm font-medium">
+                      {documentCount} documenten beschikbaar
+                    </span>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-center gap-4 mb-10 animate-fade-in-up delay-150">
+                  <div className="flex items-center gap-2 px-4 py-2 bg-amber-50 text-amber-700 rounded-lg">
+                    <BookOpen className="w-4 h-4" />
+                    <span className="text-sm font-medium">
+                      Nog geen documenten -{" "}
+                      <Link
+                        href={`/gemeente/${gemeenteId}/toevoegen`}
+                        className="underline hover:no-underline"
+                      >
+                        voeg er een toe
+                      </Link>
+                    </span>
+                  </div>
+                </div>
+              )}
 
               {/* Suggested Questions */}
               <div className="w-full max-w-lg animate-fade-in-up delay-200">
@@ -200,9 +373,7 @@ export default function GemeenteAIPage() {
                       <p className="font-semibold text-[#1a2e3b] mb-1 group-hover:text-[#288978] transition-colors">
                         {item.title}
                       </p>
-                      <p className="text-sm text-[#7a8a9a]">
-                        {item.description}
-                      </p>
+                      <p className="text-sm text-[#7a8a9a]">{item.description}</p>
                     </button>
                   ))}
                 </div>
@@ -214,7 +385,9 @@ export default function GemeenteAIPage() {
               {messages.map((message) => (
                 <div
                   key={message.id}
-                  className={`flex gap-4 ${message.role === "user" ? "justify-end" : ""} animate-fade-in-up`}
+                  className={`flex gap-4 ${
+                    message.role === "user" ? "justify-end" : ""
+                  } animate-fade-in-up`}
                 >
                   {message.role === "assistant" && (
                     <div
@@ -231,10 +404,14 @@ export default function GemeenteAIPage() {
                         ? "text-white rounded-2xl rounded-br-md px-5 py-3 shadow-lg"
                         : "bg-white rounded-2xl rounded-tl-md px-6 py-5 border border-[#e8ecf0] shadow-sm"
                     }`}
-                    style={message.role === "user" ? {
-                      background: `linear-gradient(135deg, ${gemeente.color} 0%, ${gemeente.color}dd 100%)`,
-                      boxShadow: `0 8px 20px ${gemeente.color}30`
-                    } : {}}
+                    style={
+                      message.role === "user"
+                        ? {
+                            background: `linear-gradient(135deg, ${gemeente.color} 0%, ${gemeente.color}dd 100%)`,
+                            boxShadow: `0 8px 20px ${gemeente.color}30`,
+                          }
+                        : {}
+                    }
                   >
                     {message.role === "assistant" ? (
                       <>
@@ -245,7 +422,10 @@ export default function GemeenteAIPage() {
                               className="mb-3 last:mb-0 leading-relaxed text-[#415161]"
                               dangerouslySetInnerHTML={{
                                 __html: paragraph
-                                  .replace(/\*\*(.*?)\*\*/g, "<strong class='text-[#1a2e3b]'>$1</strong>")
+                                  .replace(
+                                    /\*\*(.*?)\*\*/g,
+                                    "<strong class='text-[#1a2e3b]'>$1</strong>"
+                                  )
                                   .replace(/\n/g, "<br />"),
                               }}
                             />
@@ -265,16 +445,22 @@ export default function GemeenteAIPage() {
                                 >
                                   <div
                                     className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
-                                    style={{ backgroundColor: `${gemeente.color}15` }}
+                                    style={{
+                                      backgroundColor: `${gemeente.color}15`,
+                                    }}
                                   >
-                                    <FileText className="w-4 h-4" style={{ color: gemeente.color }} />
+                                    <FileText
+                                      className="w-4 h-4"
+                                      style={{ color: gemeente.color }}
+                                    />
                                   </div>
                                   <div className="flex-1 min-w-0">
                                     <p className="text-sm font-medium text-[#1a2e3b] truncate">
                                       {bron.titel}
                                     </p>
                                     <p className="text-xs text-[#7a8a9a]">
-                                      {bron.type} {bron.extra && `• ${bron.extra}`}
+                                      {bron.type}{" "}
+                                      {bron.extra && `• ${bron.extra}`}
                                     </p>
                                   </div>
                                   <ChevronRight className="w-4 h-4 text-[#a8b5c4]" />
@@ -308,12 +494,30 @@ export default function GemeenteAIPage() {
                   <div className="bg-white rounded-2xl rounded-tl-md px-6 py-5 border border-[#e8ecf0] shadow-sm">
                     <div className="flex items-center gap-3">
                       <div className="flex gap-1">
-                        <span className="w-2 h-2 rounded-full animate-bounce" style={{ backgroundColor: gemeente.color, animationDelay: "0ms" }} />
-                        <span className="w-2 h-2 rounded-full animate-bounce" style={{ backgroundColor: gemeente.color, animationDelay: "150ms" }} />
-                        <span className="w-2 h-2 rounded-full animate-bounce" style={{ backgroundColor: gemeente.color, animationDelay: "300ms" }} />
+                        <span
+                          className="w-2 h-2 rounded-full animate-bounce"
+                          style={{
+                            backgroundColor: gemeente.color,
+                            animationDelay: "0ms",
+                          }}
+                        />
+                        <span
+                          className="w-2 h-2 rounded-full animate-bounce"
+                          style={{
+                            backgroundColor: gemeente.color,
+                            animationDelay: "150ms",
+                          }}
+                        />
+                        <span
+                          className="w-2 h-2 rounded-full animate-bounce"
+                          style={{
+                            backgroundColor: gemeente.color,
+                            animationDelay: "300ms",
+                          }}
+                        />
                       </div>
                       <span className="text-[#7a8a9a]">
-                        Zoeken in {gemeente.naam} kennis...
+                        AI zoekt in {gemeente.naam} documenten...
                       </span>
                     </div>
                   </div>
@@ -344,7 +548,7 @@ export default function GemeenteAIPage() {
               className="absolute right-2 top-1/2 -translate-y-1/2 w-12 h-12 text-white rounded-xl flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-lg transition-all"
               style={{
                 background: `linear-gradient(135deg, ${gemeente.color} 0%, ${gemeente.color}dd 100%)`,
-                boxShadow: `0 4px 12px ${gemeente.color}40`
+                boxShadow: `0 4px 12px ${gemeente.color}40`,
               }}
             >
               {isLoading ? (
