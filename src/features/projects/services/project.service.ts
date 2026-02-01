@@ -69,7 +69,7 @@ function transformNote(note: DBProjectNote): ProjectNote {
 export async function getProjects(): Promise<Project[]> {
   const supabase = createBrowserSupabaseClient();
 
-  const { data: projects, error } = await supabase
+  const { data, error } = await supabase
     .from('projects')
     .select('*')
     .order('created_at', { ascending: false });
@@ -78,17 +78,21 @@ export async function getProjects(): Promise<Project[]> {
     throw AppError.database(`Fout bij ophalen projecten: ${error.message}`);
   }
 
+  const projects = data as DBProject[] | null;
+
   if (!projects || projects.length === 0) {
     return [];
   }
 
   // Get notes for all projects in one query
   const projectIds = projects.map((p) => p.id);
-  const { data: notes } = await supabase
+  const { data: notesData } = await supabase
     .from('project_notes')
     .select('*')
     .in('project_id', projectIds)
     .order('created_at', { ascending: false });
+
+  const notes = notesData as DBProjectNote[] | null;
 
   // Group notes by project
   const notesMap = new Map<string, ProjectNote[]>();
@@ -107,7 +111,7 @@ export async function getProjects(): Promise<Project[]> {
 export async function getProjectById(projectId: string): Promise<Project> {
   const supabase = createBrowserSupabaseClient();
 
-  const { data: project, error } = await supabase
+  const { data, error } = await supabase
     .from('projects')
     .select('*')
     .eq('id', projectId)
@@ -120,13 +124,17 @@ export async function getProjectById(projectId: string): Promise<Project> {
     throw AppError.database(`Fout bij ophalen project: ${error.message}`);
   }
 
-  const { data: notes } = await supabase
+  const project = data as DBProject;
+
+  const { data: notesData } = await supabase
     .from('project_notes')
     .select('*')
     .eq('project_id', projectId)
     .order('created_at', { ascending: false });
 
-  return transformProject(project, (notes || []).map(transformNote));
+  const notes = (notesData as DBProjectNote[] | null) || [];
+
+  return transformProject(project, notes.map(transformNote));
 }
 
 /**
@@ -152,7 +160,7 @@ export async function createProject(input: CreateProjectInput): Promise<Project>
     status: 'actief',
   };
 
-  const { data: project, error } = await supabase
+  const { data, error } = await supabase
     .from('projects')
     .insert(insertData)
     .select()
@@ -162,7 +170,7 @@ export async function createProject(input: CreateProjectInput): Promise<Project>
     throw AppError.database(`Fout bij aanmaken project: ${error.message}`);
   }
 
-  return transformProject(project, []);
+  return transformProject(data as DBProject, []);
 }
 
 /**
@@ -180,7 +188,7 @@ export async function updateProject(
   if (input.color !== undefined) updateData.color = input.color;
   if (input.status !== undefined) updateData.status = input.status;
 
-  const { data: project, error } = await supabase
+  const { data, error } = await supabase
     .from('projects')
     .update(updateData)
     .eq('id', projectId)
@@ -194,14 +202,18 @@ export async function updateProject(
     throw AppError.database(`Fout bij bijwerken project: ${error.message}`);
   }
 
+  const project = data as DBProject;
+
   // Get notes for the updated project
-  const { data: notes } = await supabase
+  const { data: notesData } = await supabase
     .from('project_notes')
     .select('*')
     .eq('project_id', projectId)
     .order('created_at', { ascending: false });
 
-  return transformProject(project, (notes || []).map(transformNote));
+  const notes = (notesData as DBProjectNote[] | null) || [];
+
+  return transformProject(project, notes.map(transformNote));
 }
 
 /**
@@ -233,7 +245,7 @@ export async function addNote(
     article_id: articleId || null,
   };
 
-  const { data: note, error } = await supabase
+  const { data, error } = await supabase
     .from('project_notes')
     .insert(insertData)
     .select()
@@ -243,7 +255,7 @@ export async function addNote(
     throw AppError.database(`Fout bij toevoegen notitie: ${error.message}`);
   }
 
-  return transformNote(note);
+  return transformNote(data as DBProjectNote);
 }
 
 /**
@@ -252,7 +264,7 @@ export async function addNote(
 export async function updateNote(noteId: string, content: string): Promise<ProjectNote> {
   const supabase = createBrowserSupabaseClient();
 
-  const { data: note, error } = await supabase
+  const { data, error } = await supabase
     .from('project_notes')
     .update({ content })
     .eq('id', noteId)
@@ -263,7 +275,7 @@ export async function updateNote(noteId: string, content: string): Promise<Proje
     throw AppError.database(`Fout bij bijwerken notitie: ${error.message}`);
   }
 
-  return transformNote(note);
+  return transformNote(data as DBProjectNote);
 }
 
 /**
