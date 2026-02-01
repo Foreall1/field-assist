@@ -1,7 +1,6 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import OpenAI from 'openai';
-import { createServerClient } from '@/lib/supabase';
-import { createAPIRouteClient } from '@/lib/supabase-server';
+import { createAPIRouteClient } from '@/infrastructure/supabase/server';
 import { createEmbedding } from '@/lib/embeddings';
 import {
   SYSTEM_PROMPT,
@@ -9,36 +8,42 @@ import {
   buildContextPrompt,
   extractCitations,
 } from '@/lib/ai-service';
-import { UserRole, Citation } from '@/lib/types';
+import { AppError } from '@/core/errors';
+import { ChatRequestSchema } from '@/core/validation/schemas';
+import { validateOrThrow } from '@/core/validation/validators';
+import {
+  withAuth,
+  enforceRateLimit,
+  successResponse,
+  handleApiError,
+  streamResponse,
+  type AuthContext,
+} from '../_lib';
+import type { Citation } from '@/lib/types';
+import type { MatchArticlesResult, MatchDocumentChunksResult } from '@/infrastructure/supabase/types';
 
 // Lazy initialization of OpenAI client
-function getOpenAIClient() {
-  if (!process.env.OPENAI_API_KEY) {
-    throw new Error('OpenAI API key not configured');
-  }
-  return new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY,
-  });
-}
+let openaiClient: OpenAI | null = null;
 
-interface ChatRequest {
-  query: string;
-  userRole?: UserRole;
-  conversationHistory?: Array<{ role: 'user' | 'assistant'; content: string }>;
-  stream?: boolean;
-  gemeenteId?: string; // Optional filter for gemeente-specific searches
+function getOpenAIClient(): OpenAI {
+  if (openaiClient) return openaiClient;
+
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) {
+    throw AppError.internal('OpenAI API key niet geconfigureerd');
+  }
+
+  openaiClient = new OpenAI({ apiKey });
+  return openaiClient;
 }
 
 // Search for relevant articles using vector similarity
-async function searchRelevantArticles(query: string, limit: number = 5) {
+async function searchRelevantArticles(query: string, limit = 5): Promise<MatchArticlesResult[]> {
   try {
-    // Generate embedding for the query
     const queryEmbedding = await createEmbedding(query);
+    const supabase = await createAPIRouteClient();
 
-    // Search using Supabase vector similarity
-    const supabase = createServerClient();
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data, error } = await (supabase.rpc as any)('match_articles', {
+    const { data, error } = await supabase.rpc('match_articles', {
       query_embedding: queryEmbedding,
       match_threshold: 0.7,
       match_count: limit,
@@ -49,7 +54,7 @@ async function searchRelevantArticles(query: string, limit: number = 5) {
       return [];
     }
 
-    return data || [];
+    return (data as MatchArticlesResult[]) || [];
   } catch (error) {
     console.error('Error in searchRelevantArticles:', error);
     return [];
@@ -57,13 +62,16 @@ async function searchRelevantArticles(query: string, limit: number = 5) {
 }
 
 // Fallback: keyword-based search
-async function keywordSearchArticles(query: string, limit: number = 5) {
-  const supabase = createServerClient();
+async function keywordSearchArticles(query: string, limit = 5) {
+  const supabase = await createAPIRouteClient();
+
+  // Sanitize query for ilike pattern
+  const sanitizedQuery = query.replace(/[%_]/g, '');
 
   const { data, error } = await supabase
     .from('articles')
     .select('id, title, summary, content, category')
-    .or(`title.ilike.%${query}%,summary.ilike.%${query}%,content.ilike.%${query}%`)
+    .or(`title.ilike.%${sanitizedQuery}%,summary.ilike.%${sanitizedQuery}%,content.ilike.%${sanitizedQuery}%`)
     .limit(limit);
 
   if (error) {
@@ -75,13 +83,16 @@ async function keywordSearchArticles(query: string, limit: number = 5) {
 }
 
 // Search in document chunks (uploaded documents)
-async function searchDocumentChunks(query: string, limit: number = 5, gemeenteId?: string) {
+async function searchDocumentChunks(
+  query: string,
+  limit = 5,
+  gemeenteId?: string
+): Promise<MatchDocumentChunksResult[]> {
   try {
     const queryEmbedding = await createEmbedding(query);
-    const supabase = createServerClient();
+    const supabase = await createAPIRouteClient();
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data, error } = await (supabase.rpc as any)('match_document_chunks', {
+    const { data, error } = await supabase.rpc('match_document_chunks', {
       query_embedding: queryEmbedding,
       match_threshold: 0.7,
       match_count: limit,
@@ -93,7 +104,7 @@ async function searchDocumentChunks(query: string, limit: number = 5, gemeenteId
       return [];
     }
 
-    return data || [];
+    return (data as MatchDocumentChunksResult[]) || [];
   } catch (error) {
     console.error('Error in searchDocumentChunks:', error);
     return [];
@@ -101,13 +112,16 @@ async function searchDocumentChunks(query: string, limit: number = 5, gemeenteId
 }
 
 // Keyword search in document chunks
-async function keywordSearchDocumentChunks(query: string, limit: number = 5) {
-  const supabase = createServerClient();
+async function keywordSearchDocumentChunks(query: string, limit = 5) {
+  const supabase = await createAPIRouteClient();
+
+  // Sanitize query for ilike pattern
+  const sanitizedQuery = query.replace(/[%_]/g, '');
 
   const { data, error } = await supabase
     .from('document_chunks')
-    .select('id, source_type, source_id, title, content, gemeente_id')
-    .or(`title.ilike.%${query}%,content.ilike.%${query}%`)
+    .select('id, document_type, document_id, title, content, gemeente_id')
+    .or(`title.ilike.%${sanitizedQuery}%,content.ilike.%${sanitizedQuery}%`)
     .limit(limit);
 
   if (error) {
@@ -118,35 +132,27 @@ async function keywordSearchDocumentChunks(query: string, limit: number = 5) {
   return data || [];
 }
 
+interface RelevantContent {
+  id: string;
+  title: string;
+  content: string;
+  category: string;
+  source?: string;
+}
+
 export async function POST(request: NextRequest) {
-  try {
-    // Authenticatie check - alleen ingelogde gebruikers
-    const supabaseAuth = await createAPIRouteClient();
-    const { data: { session } } = await supabaseAuth.auth.getSession();
+  return withAuth(request, async (req: NextRequest, context: AuthContext) => {
+    // Rate limiting - 20 requests per minuut per user
+    const rateLimitResult = await enforceRateLimit(context.userId, 'chat');
 
-    if (!session) {
-      return NextResponse.json(
-        { error: 'Unauthorized - Je moet ingelogd zijn om de chat te gebruiken' },
-        { status: 401 }
-      );
-    }
+    // Valideer request body
+    const body = await req.json();
+    const validatedData = validateOrThrow(ChatRequestSchema, body);
 
-    const body: ChatRequest = await request.json();
-    const { query, userRole, conversationHistory = [], stream = false, gemeenteId } = body;
+    const { query, userRole, conversationHistory, stream, gemeenteId } = validatedData;
 
-    if (!query) {
-      return NextResponse.json(
-        { error: 'Query is required' },
-        { status: 400 }
-      );
-    }
-
-    if (!process.env.OPENAI_API_KEY) {
-      return NextResponse.json(
-        { error: 'OpenAI API key not configured' },
-        { status: 500 }
-      );
-    }
+    // Check OpenAI API key
+    getOpenAIClient();
 
     // Search for relevant articles (try vector search first, fallback to keyword)
     let relevantArticles = await searchRelevantArticles(query);
@@ -163,15 +169,21 @@ export async function POST(request: NextRequest) {
     }
 
     // Combine results - documents from the gemeente first, then general articles
-    const allRelevantContent = [
-      ...relevantDocuments.map((doc: { id: string; source_type: string; title: string; content: string; gemeente_id?: string }) => ({
+    const allRelevantContent: RelevantContent[] = [
+      ...relevantDocuments.map((doc) => ({
         id: doc.id,
         title: doc.title,
         content: doc.content,
-        category: doc.source_type,
+        category: doc.document_id || 'document',
         source: doc.gemeente_id ? `Gemeente ${doc.gemeente_id}` : 'Geüpload document',
       })),
-      ...relevantArticles,
+      ...relevantArticles.map((article) => ({
+        id: article.id,
+        title: article.title,
+        content: article.content,
+        category: article.category,
+        source: 'Kennisbank',
+      })),
     ].slice(0, 8); // Limit total context
 
     // Build the system prompt with context
@@ -197,7 +209,7 @@ export async function POST(request: NextRequest) {
 
     if (stream) {
       // Streaming response
-      const streamResponse = await openai.chat.completions.create({
+      const streamOpenAI = await openai.chat.completions.create({
         model: 'gpt-4-turbo-preview',
         messages,
         stream: true,
@@ -216,7 +228,7 @@ export async function POST(request: NextRequest) {
               encoder.encode(`data: ${JSON.stringify({ citations })}\n\n`)
             );
 
-            for await (const chunk of streamResponse) {
+            for await (const chunk of streamOpenAI) {
               const content = chunk.choices[0]?.delta?.content || '';
               if (content) {
                 controller.enqueue(
@@ -229,17 +241,18 @@ export async function POST(request: NextRequest) {
             controller.close();
           } catch (error) {
             console.error('Stream error:', error);
-            controller.error(error);
+            controller.enqueue(
+              encoder.encode(
+                `data: ${JSON.stringify({ error: 'Stream error' })}\n\n`
+              )
+            );
+            controller.close();
           }
         },
       });
 
-      return new Response(readableStream, {
-        headers: {
-          'Content-Type': 'text/event-stream',
-          'Cache-Control': 'no-cache',
-          Connection: 'keep-alive',
-        },
+      return streamResponse(readableStream, {
+        'X-RateLimit-Remaining': rateLimitResult.remaining.toString(),
       });
     } else {
       // Non-streaming response
@@ -252,20 +265,10 @@ export async function POST(request: NextRequest) {
 
       const content = completion.choices[0]?.message?.content || '';
 
-      return NextResponse.json({
+      return successResponse({
         content,
         citations,
       });
     }
-  } catch (error) {
-    console.error('Chat API error:', error);
-
-    return NextResponse.json(
-      {
-        error: 'Failed to generate response',
-        message: error instanceof Error ? error.message : 'Unknown error',
-      },
-      { status: 500 }
-    );
-  }
+  }).catch(handleApiError);
 }
