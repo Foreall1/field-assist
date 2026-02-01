@@ -46,10 +46,10 @@ type AuthenticatedHandler<T> = (
  * }
  * ```
  */
-export async function withAuth<T extends NextResponse>(
+export async function withAuth<T extends Response>(
   request: NextRequest,
   handler: AuthenticatedHandler<T>
-): Promise<NextResponse> {
+): Promise<Response> {
   try {
     const supabase = await createAPIRouteClient();
 
@@ -101,11 +101,11 @@ export async function withAuth<T extends NextResponse>(
  * }
  * ```
  */
-export async function withRole<T extends NextResponse>(
+export async function withRole<T extends Response>(
   request: NextRequest,
   allowedRoles: string[],
   handler: AuthenticatedHandler<T>
-): Promise<NextResponse> {
+): Promise<Response> {
   return withAuth(request, async (req, context) => {
     if (!context.profile) {
       throw AppError.forbidden('Profiel niet gevonden');
