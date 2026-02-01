@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { createAPIRouteClient } from '@/infrastructure/supabase/server';
 import { AppError, ErrorCode } from '@/core/errors';
 import { handleApiError } from './response';
