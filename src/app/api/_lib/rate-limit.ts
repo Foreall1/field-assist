@@ -200,11 +200,11 @@ export function checkInMemoryRateLimit(
  */
 export function cleanupInMemoryLimits(): void {
   const now = Date.now();
-  for (const [key, value] of inMemoryLimits.entries()) {
+  inMemoryLimits.forEach((value, key) => {
     if (value.resetAt < now) {
       inMemoryLimits.delete(key);
     }
-  }
+  });
 }
 
 // Cleanup elke 5 minuten
