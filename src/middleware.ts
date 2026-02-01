@@ -77,7 +77,10 @@ export async function middleware(request: NextRequest) {
     }
   )
 
-  const { data: { session } } = await supabase.auth.getSession()
+  // IMPORTANT: Use getUser() instead of getSession() to properly refresh the session
+  // getSession() only reads from cookies, getUser() validates and refreshes the token
+  const { data: { user }, error } = await supabase.auth.getUser()
+
   const pathname = request.nextUrl.pathname
 
   // Check if current route is public (no auth required)
@@ -91,13 +94,13 @@ export async function middleware(request: NextRequest) {
   )
 
   // Redirect to home if accessing auth routes while logged in
-  if (isAuthRoute && session) {
+  if (isAuthRoute && user) {
     return NextResponse.redirect(new URL('/', request.url))
   }
 
-  // Redirect to login if accessing protected route without session
+  // Redirect to login if accessing protected route without valid user
   // (alle routes behalve publieke en auth routes zijn beschermd)
-  if (!isPublicRoute && !isAuthRoute && !session) {
+  if (!isPublicRoute && !isAuthRoute && !user) {
     const loginUrl = new URL('/login', request.url)
     loginUrl.searchParams.set('redirect', pathname)
     return NextResponse.redirect(loginUrl)
