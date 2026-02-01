@@ -79,7 +79,7 @@ export async function middleware(request: NextRequest) {
 
   // IMPORTANT: Use getUser() instead of getSession() to properly refresh the session
   // getSession() only reads from cookies, getUser() validates and refreshes the token
-  const { data: { user }, error } = await supabase.auth.getUser()
+  const { data: { user } } = await supabase.auth.getUser()
 
   const pathname = request.nextUrl.pathname
 
