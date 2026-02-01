@@ -1,8 +1,8 @@
 "use client";
 
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, useMemo, ReactNode } from 'react';
 import { User as SupabaseUser, Session } from '@supabase/supabase-js';
-import { getSupabaseClient } from '@/lib/supabase';
+import { createBrowserSupabaseClient } from '@/infrastructure/supabase/client';
 import { User, UserPreferences, UserRole } from '@/lib/types';
 
 interface UserContextType {
@@ -32,7 +32,8 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  const supabase = getSupabaseClient();
+  // Use the modern browser client with proper cookie handling
+  const supabase = useMemo(() => createBrowserSupabaseClient(), []);
 
   // Load user profile from Supabase
   const loadUserProfile = async (userId: string, userEmail: string) => {
@@ -100,17 +101,21 @@ export function UserProvider({ children }: { children: ReactNode }) {
       }
     );
 
-    // STAP 2: Dan pas session ophalen
+    // STAP 2: Dan pas user ophalen met getUser() (niet getSession!)
+    // getUser() valideert en refresht de sessie, getSession() leest alleen uit cookies
     const initAuth = async () => {
       try {
-        const { data: { session: initialSession } } = await supabase.auth.getSession();
+        // First get user (validates/refreshes token)
+        const { data: { user: initialUser } } = await supabase.auth.getUser();
 
         if (!isMounted) return;
 
-        if (initialSession?.user) {
+        if (initialUser) {
+          // Then get session for the session object
+          const { data: { session: initialSession } } = await supabase.auth.getSession();
           setSession(initialSession);
-          setSupabaseUser(initialSession.user);
-          await loadUserProfile(initialSession.user.id, initialSession.user.email || '');
+          setSupabaseUser(initialUser);
+          await loadUserProfile(initialUser.id, initialUser.email || '');
         }
       } catch (err) {
         // Negeer AbortError volledig - dit is normaal gedrag bij unmount
