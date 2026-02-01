@@ -1,4 +1,4 @@
-import { createServerClient, type CookieOptions } from '@supabase/ssr'
+import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
 // Routes die GEEN authenticatie vereisen (publiek toegankelijk)
@@ -25,52 +25,34 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next()
   }
 
+  // Create response that we'll modify with cookies
   let response = NextResponse.next({
-    request: {
-      headers: request.headers,
-    },
+    request,
   })
 
+  // Use the modern getAll/setAll cookie pattern for proper session handling
   const supabase = createServerClient(
     supabaseUrl,
     supabaseAnonKey,
     {
       cookies: {
-        get(name: string) {
-          return request.cookies.get(name)?.value
+        getAll() {
+          return request.cookies.getAll()
         },
-        set(name: string, value: string, options: CookieOptions) {
-          request.cookies.set({
-            name,
-            value,
-            ...options,
+        setAll(cookiesToSet) {
+          // First set cookies on the request (for server-side access)
+          cookiesToSet.forEach(({ name, value, options }) => {
+            request.cookies.set(name, value)
           })
+
+          // Create a new response with updated cookies
           response = NextResponse.next({
-            request: {
-              headers: request.headers,
-            },
+            request,
           })
-          response.cookies.set({
-            name,
-            value,
-            ...options,
-          })
-        },
-        remove(name: string, options: CookieOptions) {
-          request.cookies.set({
-            name,
-            value: '',
-            ...options,
-          })
-          response = NextResponse.next({
-            request: {
-              headers: request.headers,
-            },
-          })
-          response.cookies.set({
-            name,
-            value: '',
-            ...options,
+
+          // Set cookies on the response (for the browser)
+          cookiesToSet.forEach(({ name, value, options }) => {
+            response.cookies.set(name, value, options)
           })
         },
       },
