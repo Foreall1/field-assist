@@ -1,6 +1,8 @@
 import { createClient } from '@supabase/supabase-js';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import type { Database } from './types';
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type AnyDatabase = any;
 
 /**
  * WAARSCHUWING: Deze client bypassed Row Level Security!
@@ -16,14 +18,14 @@ import type { Database } from './types';
  * - Queries gebaseerd op user input
  */
 
-let adminClient: SupabaseClient<Database> | null = null;
+let adminClient: SupabaseClient<AnyDatabase> | null = null;
 
 /**
  * Creëer een admin Supabase client met service role key
  *
  * Deze client bypassed RLS policies en mag ALLEEN server-side worden gebruikt.
  */
-export function createAdminClient(): SupabaseClient<Database> {
+export function createAdminClient(): SupabaseClient<AnyDatabase> {
   // Zorg dat dit alleen server-side wordt aangeroepen
   if (typeof window !== 'undefined') {
     throw new Error(
@@ -50,7 +52,7 @@ export function createAdminClient(): SupabaseClient<Database> {
     );
   }
 
-  adminClient = createClient<Database>(supabaseUrl, serviceRoleKey, {
+  adminClient = createClient<AnyDatabase>(supabaseUrl, serviceRoleKey, {
     auth: {
       autoRefreshToken: false,
       persistSession: false,

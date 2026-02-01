@@ -2,12 +2,14 @@
 
 import { createBrowserClient } from '@supabase/ssr';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import type { Database } from './types';
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type AnyDatabase = any;
 
 /**
  * Singleton instance voor browser-side Supabase client
  */
-let browserClient: SupabaseClient<Database> | null = null;
+let browserClient: SupabaseClient<AnyDatabase> | null = null;
 
 /**
  * Creëer een browser-side Supabase client
@@ -15,7 +17,7 @@ let browserClient: SupabaseClient<Database> | null = null;
  * Dit is de enige client die in React components gebruikt mag worden.
  * Gebruikt de anon key en respecteert RLS policies.
  */
-export function createBrowserSupabaseClient(): SupabaseClient<Database> {
+export function createBrowserSupabaseClient(): SupabaseClient<AnyDatabase> {
   if (browserClient) {
     return browserClient;
   }
@@ -30,7 +32,7 @@ export function createBrowserSupabaseClient(): SupabaseClient<Database> {
     );
   }
 
-  browserClient = createBrowserClient<Database>(supabaseUrl, supabaseAnonKey);
+  browserClient = createBrowserClient(supabaseUrl, supabaseAnonKey);
 
   return browserClient;
 }

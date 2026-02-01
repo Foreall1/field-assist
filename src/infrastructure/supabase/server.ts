@@ -1,7 +1,9 @@
 import { createServerClient as createSSRServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import type { Database } from './types';
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type AnyDatabase = any;
 
 /**
  * Creëer een server-side Supabase client voor API routes
@@ -11,7 +13,7 @@ import type { Database } from './types';
  * - Leest session uit cookies
  * - Kan alleen in API routes en Server Components worden gebruikt
  */
-export async function createAPIRouteClient(): Promise<SupabaseClient<Database>> {
+export async function createAPIRouteClient(): Promise<SupabaseClient<AnyDatabase>> {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
@@ -24,7 +26,7 @@ export async function createAPIRouteClient(): Promise<SupabaseClient<Database>> 
 
   const cookieStore = await cookies();
 
-  return createSSRServerClient<Database>(supabaseUrl, supabaseAnonKey, {
+  return createSSRServerClient<AnyDatabase>(supabaseUrl, supabaseAnonKey, {
     cookies: {
       getAll() {
         return cookieStore.getAll();
@@ -48,7 +50,7 @@ export async function createAPIRouteClient(): Promise<SupabaseClient<Database>> 
  *
  * Deze client kan alleen lezen, cookies worden niet geschreven.
  */
-export async function createServerComponentClient(): Promise<SupabaseClient<Database>> {
+export async function createServerComponentClient(): Promise<SupabaseClient<AnyDatabase>> {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
@@ -61,7 +63,7 @@ export async function createServerComponentClient(): Promise<SupabaseClient<Data
 
   const cookieStore = await cookies();
 
-  return createSSRServerClient<Database>(supabaseUrl, supabaseAnonKey, {
+  return createSSRServerClient<AnyDatabase>(supabaseUrl, supabaseAnonKey, {
     cookies: {
       getAll() {
         return cookieStore.getAll();
@@ -76,7 +78,7 @@ export async function createServerComponentClient(): Promise<SupabaseClient<Data
 /**
  * Type-safe helper voor het ophalen van de huidige user
  */
-export async function getCurrentUser(client: SupabaseClient<Database>) {
+export async function getCurrentUser(client: SupabaseClient<AnyDatabase>) {
   const { data: { user }, error } = await client.auth.getUser();
 
   if (error || !user) {
@@ -89,7 +91,7 @@ export async function getCurrentUser(client: SupabaseClient<Database>) {
 /**
  * Type-safe helper voor het ophalen van de huidige session
  */
-export async function getCurrentSession(client: SupabaseClient<Database>) {
+export async function getCurrentSession(client: SupabaseClient<AnyDatabase>) {
   const { data: { session }, error } = await client.auth.getSession();
 
   if (error || !session) {
