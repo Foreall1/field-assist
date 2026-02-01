@@ -137,6 +137,7 @@ async function keywordSearchDocumentChunks(query: string, limit = 5) {
 interface RelevantContent {
   id: string;
   title: string;
+  summary: string;
   content: string;
   category: string;
   source?: string;
@@ -175,6 +176,7 @@ export async function POST(request: NextRequest) {
       ...relevantDocuments.map((doc) => ({
         id: doc.id,
         title: doc.title,
+        summary: doc.content.slice(0, 200),
         content: doc.content,
         category: doc.document_id || 'document',
         source: doc.gemeente_id ? `Gemeente ${doc.gemeente_id}` : 'Geüpload document',
@@ -182,6 +184,7 @@ export async function POST(request: NextRequest) {
       ...relevantArticles.map((article) => ({
         id: article.id,
         title: article.title,
+        summary: article.summary || article.content.slice(0, 200),
         content: article.content,
         category: article.category,
         source: 'Kennisbank',
