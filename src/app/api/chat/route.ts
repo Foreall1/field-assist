@@ -63,7 +63,7 @@ async function searchRelevantArticles(query: string, limit = 5): Promise<MatchAr
 }
 
 // Fallback: keyword-based search
-async function keywordSearchArticles(query: string, limit = 5) {
+async function keywordSearchArticles(query: string, limit = 5): Promise<MatchArticlesResult[]> {
   const supabase = await createAPIRouteClient();
 
   // Sanitize query for ilike pattern
@@ -80,7 +80,12 @@ async function keywordSearchArticles(query: string, limit = 5) {
     return [];
   }
 
-  return data || [];
+  // Add default similarity for type compatibility
+  return (data || []).map((article) => ({
+    ...article,
+    summary: article.summary || '',
+    similarity: 0,
+  })) as MatchArticlesResult[];
 }
 
 // Search in document chunks (uploaded documents)
@@ -114,7 +119,7 @@ async function searchDocumentChunks(
 }
 
 // Keyword search in document chunks
-async function keywordSearchDocumentChunks(query: string, limit = 5) {
+async function keywordSearchDocumentChunks(query: string, limit = 5): Promise<MatchDocumentChunksResult[]> {
   const supabase = await createAPIRouteClient();
 
   // Sanitize query for ilike pattern
@@ -131,7 +136,12 @@ async function keywordSearchDocumentChunks(query: string, limit = 5) {
     return [];
   }
 
-  return data || [];
+  // Add default similarity for type compatibility
+  return (data || []).map((doc) => ({
+    ...doc,
+    title: doc.title || '',
+    similarity: 0,
+  })) as MatchDocumentChunksResult[];
 }
 
 interface RelevantContent {
