@@ -29,7 +29,7 @@ const RATE_LIMIT_CONFIGS: Record<string, RateLimitConfig> = {
  * Valt terug op in-memory als Redis niet geconfigureerd is
  */
 let redis: Redis | null = null;
-let rateLimiters: Map<string, Ratelimit> = new Map();
+const rateLimiters: Map<string, Ratelimit> = new Map();
 
 function getRedis(): Redis | null {
   if (redis) return redis;
@@ -130,7 +130,6 @@ export async function enforceRateLimit(
   const result = await checkRateLimit(identifier, type);
 
   if (!result.success) {
-    const resetDate = new Date(result.reset);
     const waitSeconds = Math.ceil((result.reset - Date.now()) / 1000);
 
     throw AppError.rateLimited(
