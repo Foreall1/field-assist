@@ -43,7 +43,8 @@ async function searchRelevantArticles(query: string, limit = 5): Promise<MatchAr
     const queryEmbedding = await createEmbedding(query);
     const supabase = await createAPIRouteClient();
 
-    const { data, error } = await supabase.rpc('match_articles', {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data, error } = await (supabase.rpc as any)('match_articles', {
       query_embedding: queryEmbedding,
       match_threshold: 0.7,
       match_count: limit,
@@ -92,7 +93,8 @@ async function searchDocumentChunks(
     const queryEmbedding = await createEmbedding(query);
     const supabase = await createAPIRouteClient();
 
-    const { data, error } = await supabase.rpc('match_document_chunks', {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data, error } = await (supabase.rpc as any)('match_document_chunks', {
       query_embedding: queryEmbedding,
       match_threshold: 0.7,
       match_count: limit,
